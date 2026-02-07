@@ -2,13 +2,14 @@
 
 namespace App\Filament\Pages;
 
-use App\Models\Cliente;
+use App\Mail\VentaComprobante as MailVentaComprobante;
 use App\Models\Clientes;
 use App\Models\Items;
 use App\Models\Pedido;
 use App\Models\Pedidos;
 use App\Models\Services;
 use BackedEnum;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Concerns\InteractsWithForms;
@@ -18,6 +19,7 @@ use Filament\Pages\Page;
 use Filament\Schemas\Components\Section as ComponentsSection;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 
 class PosVenta extends Page implements HasForms
 {
@@ -146,7 +148,7 @@ class PosVenta extends Page implements HasForms
     // FINALIZAR PEDIDO
     public function createOrder()
     {
-        $data = $this->form->getState(); // Valida los datos del cliente
+        $data = $this->form->getState();
 
         if (empty($this->cart)) {
             Notification::make()->title('El carrito está vacío')->warning()->send();
@@ -154,10 +156,13 @@ class PosVenta extends Page implements HasForms
             return;
         }
 
-        DB::transaction(function () use ($data) {
+        // EL CAMBIO ESTÁ AQUÍ:
+        // Asignamos a $pedidoCreado el resultado (return) de la transacción
+        $pedidoCreado = DB::transaction(function () use ($data) {
+
             // 1. Guardar o Actualizar Cliente
             $cliente = Clientes::updateOrCreate(
-                ['cliente_telefono' => $data['cliente_telefono']], // Busca por teléfono
+                ['cliente_telefono' => $data['cliente_telefono']],
                 [
                     'cliente_name' => $data['cliente_name'],
                     'cliente_email' => $data['cliente_email'],
@@ -170,15 +175,15 @@ class PosVenta extends Page implements HasForms
                 'cliente_id' => $cliente->id,
                 'total_pedido' => $this->total,
                 'medio_pago' => $data['medio_pago'],
-                'tenant_id' => auth()->user()->tenant_id ?? null, // Si usas multi-tenancy
+                'tenant_id' => auth()->user()->tenant_id ?? null,
             ]);
 
             // 3. Crear los Items
             foreach ($this->cart as $item) {
                 Items::create([
                     'pedido_id' => $pedido->id,
-                    'servicio_id' => $item['id'], // Guardamos ID
-                    'nombre_servicio' => $item['nombre'], // Y Nombre histórico
+                    'servicio_id' => $item['id'],
+                    'nombre_servicio' => $item['nombre'],
                     'cantidad' => $item['cantidad'],
                     'precio_unitario' => $item['precio'],
                     'subtotal' => $item['precio'] * $item['cantidad'],
@@ -186,6 +191,9 @@ class PosVenta extends Page implements HasForms
                     'tenant_id' => $pedido->tenant_id,
                 ]);
             }
+
+            // RETORNAMOS EL OBJETO PEDIDO PARA QUE SALGA DE LA TRANSACCIÓN
+            return $pedido;
         });
 
         // Limpiar y Notificar
@@ -194,5 +202,39 @@ class PosVenta extends Page implements HasForms
         $this->form->fill();
 
         Notification::make()->title('Venta realizada con éxito')->success()->send();
+
+        // AHORA $pedidoCreado YA TIENE DATOS (NO ES NULL)
+        // Asegúrate que las relaciones 'cliente' e 'items' existan en el modelo Pedidos
+        $pedidoCreado->load(['cliente', 'items']);
+
+        if ($pedidoCreado->cliente && $pedidoCreado->cliente->cliente_email) {
+            try {
+                Mail::to($pedidoCreado->cliente->cliente_email)
+                    ->send(new MailVentaComprobante($pedidoCreado));
+
+                Notification::make()
+                    ->title('Venta realizada y correo enviado')
+                    ->success()
+                    ->send();
+
+            } catch (\Exception $e) {
+                // Si falla el correo, al menos la venta ya se guardó
+                Notification::make()
+                    ->title('Venta guardada, pero falló el envío del correo')
+                    ->body($e->getMessage())
+                    ->warning()
+                    ->send();
+            }
+        } else {
+            Notification::make()
+                ->title('Venta realizada (Cliente sin email)')
+                ->success()
+                ->send();
+        }
+
+        // return response()->streamDownload(function () use ($pedidoCreado) {
+        //     // Asegúrate de que la ruta de la vista sea correcta ('pdf.boleta' o 'ventas.invoice')
+        //     echo Pdf::loadView('pdf.boleta', ['venta' => $pedidoCreado])->stream();
+        // }, "venta-{$pedidoCreado->id}.pdf");
     }
 }

@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\Pedidos\Tables;
 
+use Barryvdh\DomPDF\Facade\Pdf;
+use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Tables\Columns\TextColumn;
@@ -57,6 +59,19 @@ class PedidosTable
             ])
             ->recordActions([
                 EditAction::make(),
+                Action::make('descargarPDF')
+                    ->label('PDF')
+                    ->color('danger')
+                    ->icon('heroicon-o-document-arrow-down')
+                    ->action(function ($record) {
+                        // $record es una instancia del modelo Pedidos automáticamente
+
+                        $pdf = Pdf::loadView('pdf.boleta', ['venta' => $record]);
+
+                        return response()->streamDownload(function () use ($pdf) {
+                            echo $pdf->stream();
+                        }, "factura_{$record->id}.pdf");
+                    }),
             ])
             ->toolbarActions([
 
