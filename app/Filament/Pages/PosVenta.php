@@ -213,7 +213,7 @@ class PosVenta extends Page implements HasForms
                     ->send(new MailVentaComprobante($pedidoCreado));
 
                 Notification::make()
-                    ->title('Venta realizada y correo enviado')
+                    ->title('Correo enviado con éxito')
                     ->success()
                     ->send();
 
