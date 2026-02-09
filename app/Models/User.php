@@ -6,6 +6,7 @@ namespace App\Models;
 
 use App\Models\BelongsToTenant as ModelsBelongsToTenant;
 use BezhanSalleh\FilamentShield\Traits\HasPanelShield;
+use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -51,6 +52,23 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function canAccessPanel(Panel $panel): bool
+    {
+        // 1. Si el usuario tiene CUALQUIER rol asignado, déjalo entrar.
+        // (Shield se encargará después de mostrarle solo lo que puede ver)
+        if ($this->roles()->count() > 0) {
+            return true;
+        }
+
+        // 2. Si es tu correo específico de admin, déjalo entrar siempre (puerta trasera segura)
+        if ($this->email === 'admin@cleanstack.cl') {
+            return true;
+        }
+
+        // 3. A todos los demás (usuarios públicos sin rol), bloquéalos.
+        return false;
     }
 
     public function tenant()
