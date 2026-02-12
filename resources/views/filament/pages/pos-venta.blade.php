@@ -230,25 +230,50 @@
 
     @media(max-width: 640px) {
     .card {
-        width: 140px;
+        width: 160px;
         height: 200px;
-
-        margin: 0;
+        margin:auto;
     }
+    }
+    .search{
+        margin-bottom: 15px;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        padding: 0.5rem 1rem;
+        transition: all 0.3s ease;
+    }
+    .search:focus {
+        outline: none;
+        border-color: #22819A;
+        box-shadow: 0 0 0 1px #22819A;
     }
 
 </style>
 
-
+        
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
+
         {{-- COLUMNA IZQUIERDA: SERVICIOS --}}
-        <div class="lg:col-span-2">            
-            <div class="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4">                @foreach($services as $service)
-                    @if($service->is_active)
+        <div class="lg:col-span-2">  
+             <div class="mb-8 w-full">
+                <div class="relative max-w-xl mx-auto">
+                    <div class="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
+                    </div>
+                    <input 
+                        type="search" 
+                        wire:model.live.debounce.300ms="search" 
+                        class="search block w-full p-4 ps-10 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500" 
+                        placeholder="Buscar servicios por nombre..." 
+                        required 
+                    />
+                </div>
+            </div>          
+            <div class="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4">  
+                
+                @forelse($services as $service)
                    <!-- From Uiverse.io by SachinKumar666 --> 
-                    <div class="card">
+                    <div class="card"  wire:click="addToCart({{ $service->id }})">
                         <div class="card__shine"></div>
                         <div class="card__glow"></div>
                         <div class="card__content">
@@ -259,7 +284,7 @@
                             <div class="card__text">
                             <p class="card__title">{{ $service->service_name }}</p>
                             <div class="card__footer">
-                            <div class="card__price">${{ $service->service_precio }}</div>
+                            <div class="card__price">${{ number_format($service->service_precio, 0, ',', '.')  }}</div>
                             <div class="card__button"
                                 wire:click="addToCart({{ $service->id }})">
                                 <svg height="16" width="16" viewBox="0 0 24 24">
@@ -275,9 +300,11 @@
                         </div>
                         </div>
                     </div>
-
-                    @endif
-                @endforeach
+                    @empty
+                    <div class="col-span-2 lg:col-span-3 text-center py-10 text-gray-500 dark:text-gray-400">
+                        <p>No se encontraron servicios con ese nombre.</p>
+                    </div>
+                @endforelse
             </div>
         </div>
 
@@ -293,7 +320,7 @@
                             <div class="flex justify-between items-center bg-gray-50 dark:bg-gray-800 p-2 rounded">
                                 <div class="flex-1">
                                     <div class="text-sm font-medium">{{ $item['nombre'] }}</div>
-                                    <div class="text-xs text-gray-500">${{number_format($item['precio'], 0) }} c/u</div>
+                                    <div class="text-xs text-gray-500">${{number_format($item['precio'], 0, ',','.') }} c/u</div>
                                 </div>
                                 
                                 <div class="flex items-center gap-2">
@@ -303,7 +330,7 @@
                                 </div>
                                 
                                 <div class="text-right ml-2 font-semibold">
-                                    ${{ number_format($item['precio'] * $item['cantidad'], 0) }}
+                                    ${{ number_format($item['precio'] * $item['cantidad'], 0, ',', '.') }}
                                 </div>
                             </div>
                         @endforeach
@@ -311,7 +338,7 @@
 
                     <div class="flex justify-between items-center border-t border-gray-200 dark:border-gray-700 pt-4 text-xl font-bold">
                         <span>Total:</span>
-                        <span>${{ number_format($total, 0) }}</span>
+                        <span>${{ number_format($total, 0, ',', '.') }}</span>
                     </div>
                 @else
                     <div class="text-center text-gray-400 py-4">

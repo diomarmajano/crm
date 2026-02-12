@@ -29,7 +29,8 @@ class ServicesForm
                     ->label('Url de la imagen'),
 
                 Toggle::make('is_active')
-                    ->label('¿Servicio Activo?'),
+                    ->label('¿Servicio Activo?')
+                    ->default(true),
             ]);
     }
 }
