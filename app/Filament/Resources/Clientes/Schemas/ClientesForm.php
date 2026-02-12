@@ -15,15 +15,12 @@ class ClientesForm
                     ->label('Nombre del Cliente'),
                 TextInput::make('cliente_telefono')
                     ->label('Teléfono')
-                    ->tel()
-                    ->required(),
+                    ->tel(),
                 TextInput::make('cliente_email')
                     ->label('Email')
-                    ->email()
-                    ->required(),
+                    ->email(),
                 TextInput::make('cliente_direccion')
-                    ->label('Dirección')
-                    ->required(),
+                    ->label('Dirección'),
             ]);
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Providers\Filament;
 
 use App\Filament\Widgets\DailySalesChart;
+use App\Filament\Widgets\Info;
 use App\Filament\Widgets\TotalVentas;
 use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
 use Filament\Http\Middleware\Authenticate;
@@ -49,6 +50,7 @@ class AdminPanelProvider extends PanelProvider
             ->widgets([
                 // AccountWidget::class,
                 // FilamentInfoWidget::class,
+                Info::class,
                 TotalVentas::class,
                 DailySalesChart::class,
             ])

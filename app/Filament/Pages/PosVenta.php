@@ -41,6 +41,8 @@ class PosVenta extends Page implements HasForms
     // Variables del Cliente (Formulario)
     public $data = [];
 
+    public $search = '';
+
     public function mount()
     {
         $this->form->fill();
@@ -77,6 +79,20 @@ class PosVenta extends Page implements HasForms
                             ->label('Dirección'),
                     ])->columns(2),
 
+                ComponentsSection::make('Estado del pedido')
+                    ->schema([
+                        Select::make('estado_pago')
+                            ->label('¿Estado del pedido?')
+                            ->options([
+                                'pendiente' => 'Pendiente',
+                                'pagado' => 'Pagado',
+                                'abono_parcial' => 'Abono Parcial',
+                            ])
+                            ->required() // Valor por defecto
+                            ->native(false), // Para que se vea con el estilo de Filament
+                    ])
+                    ->columns(1),
+
                 ComponentsSection::make('Detalles del Pago')
                     ->schema([
                         Select::make('medio_pago')
@@ -84,14 +100,13 @@ class PosVenta extends Page implements HasForms
                             ->options([
                                 'efectivo' => 'Efectivo',
                                 'transferencia' => 'Transferencia',
-                                'debito' => 'Tarjeta Débito',
-                                'credito' => 'Tarjeta Crédito',
+                                'transbank' => 'Transbank',
                                 'otro' => 'Otro',
                             ])
-                            ->required() // Valor por defecto
                             ->native(false), // Para que se vea con el estilo de Filament
                     ])
                     ->columns(1),
+
             ])
             ->statePath('data');
     }
@@ -99,9 +114,22 @@ class PosVenta extends Page implements HasForms
     // Obtener los servicios para mostrarlos en la vista
     public function getViewData(): array
     {
+        // return [
+        //     'services' => Services::all(),
+        // ];
+
+        $services = Services::query()
+            ->where('is_active', true) // Mantén esto si solo quieres ver los activos
+            ->when($this->search, function ($query) {
+                // Si hay algo en $search, aplica este filtro
+                $query->where('service_name', 'like', '%'.$this->search.'%');
+            })
+            ->get(); // Ejecuta la consulta
+
         return [
-            'services' => Services::all(),
+            'services' => $services,
         ];
+
     }
 
     // LÓGICA DEL CARRITO
@@ -175,6 +203,7 @@ class PosVenta extends Page implements HasForms
                 'cliente_id' => $cliente->id,
                 'total_pedido' => $this->total,
                 'medio_pago' => $data['medio_pago'],
+                'estado_pago' => $data['estado_pago'],
                 'tenant_id' => auth()->user()->tenant_id ?? null,
             ]);
 
