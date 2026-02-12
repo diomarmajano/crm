@@ -3,12 +3,15 @@
 namespace App\Filament\Widgets;
 
 use App\Models\Pedidos;
+use BezhanSalleh\FilamentShield\Traits\HasWidgetShield;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Leandrocfe\FilamentApexCharts\Widgets\ApexChartWidget;
 
 class DailySalesChart extends ApexChartWidget
 {
+    use HasWidgetShield;
+
     protected static ?string $chartId = 'dailySalesChart';
 
     protected static ?string $heading = 'Ventas por días del mes';
