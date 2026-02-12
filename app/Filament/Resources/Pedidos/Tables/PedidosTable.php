@@ -38,10 +38,10 @@ class PedidosTable
                     ->label('Estado del Pedido')
                     ->native(false)
                     ->options([
-                        'pendiente' => 'Pendiente',
-                        'completado' => 'Completado',
-                        'entregado' => 'Entregado',
-                        'cancelado' => 'Cancelado',
+                        'pendiente' => 'Pendiente ⏳',
+                        'completado' => 'Realizado ✅',
+                        'entregado' => 'Entregado 📦',
+                        'cancelado' => 'Cancelado ❌',
                     ])
                     ->searchable(),
 
@@ -49,9 +49,8 @@ class PedidosTable
                     ->label('Estado del Pago')
                     ->native(false)
                     ->options([
-                        'pendiente' => 'Pendiente',
-                        'pagado' => 'Pagado',
-                        'abono_parcial' => 'Abono Parcial',
+                        'pendiente' => 'Pendiente ❌',
+                        'pagado' => 'Pagado ✅',
                     ])
                     ->searchable(),
                 SelectColumn::make('medio_pago')
