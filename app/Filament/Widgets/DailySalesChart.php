@@ -53,6 +53,9 @@ class DailySalesChart extends ApexChartWidget
                 'type' => 'area',
                 'height' => 300, // Aumenté un poco la altura para ver mejor el mes
                 'toolbar' => ['show' => false],
+                'zoom' => [
+                    'enabled' => false,
+                ],
             ],
             'series' => [
                 [

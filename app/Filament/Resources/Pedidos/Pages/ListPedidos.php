@@ -31,10 +31,8 @@ class ListPedidos extends ListRecords
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('medio_pago', 'efectivo')),
             'Transferencia' => Tab::make()
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('medio_pago', 'transferencia')),
-            'Debito' => Tab::make()
-                ->modifyQueryUsing(fn (Builder $query) => $query->where('medio_pago', 'debito')),
-            'Credito' => Tab::make()
-                ->modifyQueryUsing(fn (Builder $query) => $query->where('medio_pago', 'credito')),
+            'Transbank' => Tab::make()
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('medio_pago', 'transbank')),
             'Otro' => Tab::make()
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('medio_pago', 'otro')),
         ];

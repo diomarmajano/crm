@@ -12,6 +12,7 @@ class Services extends Model
     protected $table = 'services';
 
     protected $fillable = [
+        'tenant_id',
         'service_name',
         'service_precio',
         'service_icon',
