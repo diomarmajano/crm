@@ -114,8 +114,8 @@
                     
                     <h2 class="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">CleanStack</h2>
                     <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Sistema de Administración de Lavanderías</p>
-                    <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Elige tu sucursal</p>
-                    <select onchange="if (this.value) window.location.href = this.value;" class="border p-2 rounded">
+                    <h3 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Elige tu sucursal</h3>
+                    <select class="peer w-full bg-transparent outline-none px-4 text-base rounded-xl bg-white border border-[#4070f4] focus:shadow-md" onchange="if (this.value) window.location.href = this.value;" class="border p-2 rounded">
     
                         <option value="">Selecciona una sucursal...</option>
 
