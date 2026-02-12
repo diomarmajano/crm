@@ -44,17 +44,17 @@ class TotalVentas extends StatsOverviewWidget
                 ->color('success'),
 
             Stat::make('Efectivo', '$'.number_format($suma_efectivo, 0, ',', '.'))
-                ->description('Ventas en efetivo del dia')
+                ->description('Ventas en efetivo del día')
                 ->descriptionIcon('heroicon-o-currency-dollar')
                 ->color('primary'),
 
             Stat::make('Transferencia', '$'.number_format($suma_transferencia, 0, ',', '.'))
-                ->description('Ventas en efetivo del dia')
+                ->description('Ventas en transferencias del día')
                 ->descriptionIcon('heroicon-o-currency-dollar')
                 ->color('primary'),
 
             Stat::make('Transbank', '$'.number_format($suma_transbak, 0, ',', '.'))
-                ->description('Ventas en efetivo del dia')
+                ->description('Ventas en transbank del día')
                 ->descriptionIcon('heroicon-o-currency-dollar')
                 ->color('primary'),
 

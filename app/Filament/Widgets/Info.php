@@ -24,7 +24,7 @@ class Info extends StatsOverviewWidget
     protected function getStats(): array
     {
         return [
-            Stat::make('Necesitas permisos para acceder', 'Datos estadisticos disponibles solo para el administrador')
+            Stat::make('Necesitas permisos para acceder', 'Datos estadísticos disponibles solo para el administrador')
                 ->description('Información')
                 ->descriptionIcon('heroicon-o-information-circle')
                 ->color('primary'),
