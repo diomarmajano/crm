@@ -45,7 +45,9 @@
 
     <div class="total">
         Total Pagado: ${{ number_format($venta->total_pedido, 0, ',', '.') }} <br>
-        <small style="font-size: 12px; font-weight: normal;">Medio de Pago: {{ ucfirst($venta->medio_pago) }}</small>
+        <small style="font-size: 12px; font-weight: normal;">Medio de Pago: {{ucfirst($venta->medio_pago) }}</small> </br>
+        <small style="font-size: 12px; font-weight: normal;">Estado del pedido: {{ ucfirst($venta->estado_pago) }}</small>
+
     </div>
 </body>
 </html>

@@ -16,6 +16,8 @@ class Pedidos extends Model
         'cliente_id',
         'medio_pago',
         'total_pedido',
+        'estado_pedido',
+        'estado_pago',
     ];
 
     public function tenant()

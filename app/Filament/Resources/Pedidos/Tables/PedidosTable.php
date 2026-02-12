@@ -6,6 +6,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\DatePicker;
+use Filament\Tables\Columns\SelectColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Table;
@@ -24,7 +25,8 @@ class PedidosTable
                 TextColumn::make('cliente.cliente_name')
                     ->label('Cliente')
                     ->icon('heroicon-s-user')
-                    ->iconColor('primary'),
+                    ->iconColor('primary')
+                    ->searchable(),
 
                 TextColumn::make('total_pedido')
                     ->label('Total Pagado')
@@ -32,10 +34,35 @@ class PedidosTable
                     ->iconColor('primary')
                     ->money('CLP'),
 
-                TextColumn::make('medio_pago')
+                SelectColumn::make('estado_pedido')
+                    ->label('Estado del Pedido')
+                    ->native(false)
+                    ->options([
+                        'pendiente' => 'Pendiente',
+                        'completado' => 'Completado',
+                        'entregado' => 'Entregado',
+                        'cancelado' => 'Cancelado',
+                    ])
+                    ->searchable(),
+
+                SelectColumn::make('estado_pago')
+                    ->label('Estado del Pago')
+                    ->native(false)
+                    ->options([
+                        'pendiente' => 'Pendiente',
+                        'pagado' => 'Pagado',
+                        'abono_parcial' => 'Abono Parcial',
+                    ])
+                    ->searchable(),
+                SelectColumn::make('medio_pago')
                     ->label('Medio de Pago')
-                    ->icon('heroicon-s-credit-card')
-                    ->iconColor('primary'),
+                    ->native(false)
+                    ->options([
+                        'efectivo' => 'Efectivo',
+                        'transferencia' => 'Transferencia',
+                        'transbank' => 'Transbank',
+                        'otro' => 'Otro',
+                    ]),
 
                 TextColumn::make('created_at')
                     ->label('Fecha')
