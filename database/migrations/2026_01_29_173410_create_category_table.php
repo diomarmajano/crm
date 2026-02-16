@@ -11,8 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('pedidos', function (Blueprint $table) {
-            $table->string('medio_pago')->nullable()->after('total_pedido');
+        Schema::create('category', function (Blueprint $table) {
+            $table->id();
+            $table->string('nombre_categoria');
+            $table->timestamps();
         });
     }
 
@@ -21,8 +23,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('pedidos', function (Blueprint $table) {
-            $table->dropColumn('medio_pago');
-        });
+        Schema::dropIfExists('category');
     }
 };

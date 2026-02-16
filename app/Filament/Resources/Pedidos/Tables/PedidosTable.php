@@ -22,8 +22,8 @@ class PedidosTable
                     ->icon('heroicon-s-building-office')
                     ->iconColor('primary'),
 
-                TextColumn::make('cliente.cliente_name')
-                    ->label('Cliente')
+                TextColumn::make('user.name')
+                    ->label('Vendedor')
                     ->icon('heroicon-s-user')
                     ->iconColor('primary')
                     ->searchable(),
@@ -34,25 +34,6 @@ class PedidosTable
                     ->iconColor('primary')
                     ->money('CLP'),
 
-                SelectColumn::make('estado_pedido')
-                    ->label('Estado del Pedido')
-                    ->native(false)
-                    ->options([
-                        'pendiente' => 'Pendiente ⏳',
-                        'completado' => 'Realizado ✅',
-                        'entregado' => 'Entregado 📦',
-                        'cancelado' => 'Cancelado ❌',
-                    ])
-                    ->searchable(),
-
-                SelectColumn::make('estado_pago')
-                    ->label('Estado del Pago')
-                    ->native(false)
-                    ->options([
-                        'pendiente' => 'Pendiente ❌',
-                        'pagado' => 'Pagado ✅',
-                    ])
-                    ->searchable(),
                 SelectColumn::make('medio_pago')
                     ->label('Medio de Pago')
                     ->native(false)

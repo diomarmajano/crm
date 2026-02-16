@@ -14,6 +14,7 @@ class Tenant extends Model
         'name',
         'slug',
         'domain',
+        'email',
         'is_active',
         'settings',
     ];

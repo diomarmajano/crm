@@ -18,6 +18,7 @@ class ServicesTable
                 TextColumn::make('tenant.name')
                     ->label('Sucursal')
                     ->badge(),
+
                 TextColumn::make('service_name')
                     ->label('Servicio')
                     ->icon('heroicon-s-cube')

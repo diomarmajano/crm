@@ -12,9 +12,9 @@ class Items extends Model
     protected $table = 'items_pedidos';
 
     protected $fillable = [
+        'tenant_id',
         'pedido_id',
         'servicio_id',
-        'cliente_id',
         'nombre_servicio',
         'cantidad',
         'precio_unitario',
@@ -31,17 +31,16 @@ class Items extends Model
         return $this->belongsTo(Pedidos::class);
     }
 
-    public function cliente()
-    {
-        return $this->belongsTo(Clientes::class);
-    }
+    // public function cliente()
+    // {
+    //     return $this->belongsTo(Clientes::class);
+    // }
 
     protected static function booted()
     {
         static::creating(function ($item) {
             // Si el item tiene un pedido padre asociado, copiamos sus datos
             if ($item->pedido) {
-                $item->cliente_id = $item->pedido->cliente_id;
                 $item->tenant_id = $item->pedido->tenant_id;
             }
         });
