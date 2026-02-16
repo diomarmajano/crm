@@ -75,4 +75,9 @@ class User extends Authenticatable
     {
         return $this->belongsTo(Tenant::class);
     }
+
+    public function pedidos()
+    {
+        return $this->hasMany(Pedidos::class);
+    }
 }

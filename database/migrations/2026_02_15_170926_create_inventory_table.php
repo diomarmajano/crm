@@ -11,8 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('services', function (Blueprint $table) {
-            $table->longText('service_icon')->nullable()->change();
+        Schema::create('inventory', function (Blueprint $table) {
+            $table->id();
+            $table->integer('stock_producto');
+            $table->integer('stock_minimo');
+            $table->decimal('precio_compra', 10, 2);
+            $table->decimal('precio_venta', 10, 2);
+            $table->timestamps();
         });
     }
 
@@ -21,8 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('services', function (Blueprint $table) {
-            $table->longText('service_icon')->change();
-        });
+        Schema::dropIfExists('inventory');
     }
 };

@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Services;
 use App\Filament\Resources\Services\Pages\CreateServices;
 use App\Filament\Resources\Services\Pages\EditServices;
 use App\Filament\Resources\Services\Pages\ListServices;
+use App\Filament\Resources\Services\RelationManagers\InventoryRelationManager;
 use App\Filament\Resources\Services\Schemas\ServicesForm;
 use App\Filament\Resources\Services\Tables\ServicesTable;
 use App\Models\Services;
@@ -41,7 +42,7 @@ class ServicesResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            InventoryRelationManager::class,
         ];
     }
 

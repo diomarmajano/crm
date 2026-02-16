@@ -11,8 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('pedidos', function (Blueprint $table) {
-            $table->string('medio_pago')->nullable()->after('total_pedido');
+        Schema::table('inventory', function (Blueprint $table) {
+            $table->foreignId('id_service')->constrained('services')->cascadeOnDelete()->nullable();
         });
     }
 
@@ -21,8 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('pedidos', function (Blueprint $table) {
-            $table->dropColumn('medio_pago');
+        Schema::table('inventory', function (Blueprint $table) {
+            $table->dropColumn('id_service');
         });
     }
 };

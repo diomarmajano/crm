@@ -2,8 +2,6 @@
 
 namespace App\Filament\Pages;
 
-use App\Mail\VentaComprobante as MailVentaComprobante;
-use App\Models\Clientes;
 use App\Models\Items;
 use App\Models\Pedido;
 use App\Models\Pedidos;
@@ -11,7 +9,6 @@ use App\Models\Services;
 use BackedEnum;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TextInput;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Notifications\Notification;
@@ -19,7 +16,6 @@ use Filament\Pages\Page;
 use Filament\Schemas\Components\Section as ComponentsSection;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Mail;
 
 class PosVenta extends Page implements HasForms
 {
@@ -53,47 +49,7 @@ class PosVenta extends Page implements HasForms
     {
         return $form
             ->schema([
-                ComponentsSection::make('Datos del Cliente')
-                    ->schema([
-                        TextInput::make('cliente_telefono') // O DNI/Cédula
-                            ->label('Contacto')
-                            ->required()
-                            ->live(onBlur: true)
-                            ->afterStateUpdated(function ($state, $set) {
-                                // Buscar si el cliente ya existe para autocompletar
-                                $cliente = Clientes::where('cliente_telefono', $state)->first();
-                                if ($cliente) {
-                                    $set('cliente_name', $cliente->cliente_name);
-                                    $set('cliente_email', $cliente->cliente_email);
-                                    $set('cliente_direccion', $cliente->cliente_direccion);
-                                    $set('cliente_telefono', $cliente->cliente_telefono);
-                                }
-                            }),
-                        TextInput::make('cliente_name')
-                            ->label('Nombre')
-                            ->required(),
-                        TextInput::make('cliente_email')
-                            ->label('Email')
-                            ->email(),
-                        TextInput::make('cliente_direccion')
-                            ->label('Dirección'),
-                    ])->columns(2),
-
-                ComponentsSection::make('Estado del pedido')
-                    ->schema([
-                        Select::make('estado_pago')
-                            ->label('¿Estado del pedido?')
-                            ->options([
-                                'pendiente' => 'Pendiente',
-                                'pagado' => 'Pagado',
-                                'abono_parcial' => 'Abono Parcial',
-                            ])
-                            ->required() // Valor por defecto
-                            ->native(false), // Para que se vea con el estilo de Filament
-                    ])
-                    ->columns(1),
-
-                ComponentsSection::make('Detalles del Pago')
+                ComponentsSection::make('Datos del pago')
                     ->schema([
                         Select::make('medio_pago')
                             ->label('Medio de Pago')
@@ -188,22 +144,11 @@ class PosVenta extends Page implements HasForms
         // Asignamos a $pedidoCreado el resultado (return) de la transacción
         $pedidoCreado = DB::transaction(function () use ($data) {
 
-            // 1. Guardar o Actualizar Cliente
-            $cliente = Clientes::updateOrCreate(
-                ['cliente_telefono' => $data['cliente_telefono']],
-                [
-                    'cliente_name' => $data['cliente_name'],
-                    'cliente_email' => $data['cliente_email'],
-                    'cliente_direccion' => $data['cliente_direccion'],
-                ]
-            );
-
             // 2. Crear el Pedido
             $pedido = Pedidos::create([
-                'cliente_id' => $cliente->id,
+                'user_id' => auth()->id(),
                 'total_pedido' => $this->total,
                 'medio_pago' => $data['medio_pago'],
-                'estado_pago' => $data['estado_pago'],
                 'tenant_id' => auth()->user()->tenant_id ?? null,
             ]);
 
@@ -216,7 +161,6 @@ class PosVenta extends Page implements HasForms
                     'cantidad' => $item['cantidad'],
                     'precio_unitario' => $item['precio'],
                     'subtotal' => $item['precio'] * $item['cantidad'],
-                    'cliente_id' => $cliente->id,
                     'tenant_id' => $pedido->tenant_id,
                 ]);
             }
@@ -234,32 +178,7 @@ class PosVenta extends Page implements HasForms
 
         // AHORA $pedidoCreado YA TIENE DATOS (NO ES NULL)
         // Asegúrate que las relaciones 'cliente' e 'items' existan en el modelo Pedidos
-        $pedidoCreado->load(['cliente', 'items']);
-
-        if ($pedidoCreado->cliente && $pedidoCreado->cliente->cliente_email) {
-            try {
-                Mail::to($pedidoCreado->cliente->cliente_email)
-                    ->send(new MailVentaComprobante($pedidoCreado));
-
-                Notification::make()
-                    ->title('Correo enviado con éxito')
-                    ->success()
-                    ->send();
-
-            } catch (\Exception $e) {
-                // Si falla el correo, al menos la venta ya se guardó
-                Notification::make()
-                    ->title('Venta guardada, pero falló el envío del correo')
-                    ->body($e->getMessage())
-                    ->warning()
-                    ->send();
-            }
-        } else {
-            Notification::make()
-                ->title('Venta realizada (Cliente sin email)')
-                ->success()
-                ->send();
-        }
+        // $pedidoCreado->load(['cliente', 'items']);
 
         // return response()->streamDownload(function () use ($pedidoCreado) {
         //     // Asegúrate de que la ruta de la vista sea correcta ('pdf.boleta' o 'ventas.invoice')

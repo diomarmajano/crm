@@ -14,9 +14,15 @@ return new class extends Migration
         Schema::create('services', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tenant_id')->nullable()->constrained()->cascadeOnDelete();
+            $table->string('sku')->nullable();
+            $table->string('codigo')->nullable();
+            $table->foreignId('id_category')->constrained('category')->cascadeOnDelete();
             $table->string('service_name', 50)->nullable();
-            $table->float('service_precio')->nullable();
-            $table->string('service_icon')->nullable();
+            $table->string('detalles')->nullable();
+            $table->decimal('service_precio', 10, 2)->nullable();
+            $table->decimal('precio_promocion', 10, 2)->nullable();
+            $table->date('fecha_vencimiento')->nullable();
+            $table->longText('service_icon')->nullable();
             $table->boolean('is_active')->nullable();
             $table->softDeletes();
             $table->timestamps();

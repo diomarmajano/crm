@@ -15,9 +15,9 @@ return new class extends Migration
             $table->id();
             $table->foreignId('tenant_id')->nullable()->constrained()->cascadeOnDelete();
             $table->string('cliente_name')->nullable();
-            $table->string('cliente_telefono');
-            $table->string('cliente_email');
-            $table->string('cliente_direccion');
+            $table->string('cliente_telefono')->nullable();
+            $table->string('cliente_email')->nullable();
+            $table->string('cliente_direccion')->nullable();
             $table->softDeletes();
             $table->timestamps();
         });

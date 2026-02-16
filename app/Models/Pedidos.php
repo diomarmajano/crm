@@ -12,12 +12,11 @@ class Pedidos extends Model
     protected $table = 'pedidos';
 
     protected $fillable = [
+        'tenant_id',
         'pedido_id',
-        'cliente_id',
+        'user_id',
         'medio_pago',
         'total_pedido',
-        'estado_pedido',
-        'estado_pago',
     ];
 
     public function tenant()
@@ -33,5 +32,10 @@ class Pedidos extends Model
     public function cliente()
     {
         return $this->belongsTo(Clientes::class);
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
     }
 }

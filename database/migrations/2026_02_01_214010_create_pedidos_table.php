@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('pedidos', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tenant_id')->nullable()->constrained()->cascadeOnDelete();
-            $table->foreignId('cliente_id')->nullable()->constrained('clientes')->cascadeOnDelete();
+            $table->foreignId('user_id')->nullable()->constrained()->cascadeOnDelete();
             $table->decimal('total_pedido', 10, 2)->nullable();
             $table->softDeletes();
             $table->timestamps();

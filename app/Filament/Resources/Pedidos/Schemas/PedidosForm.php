@@ -17,8 +17,8 @@ class PedidosForm
                 Section::make('Información del Pedido')
                     ->schema([
                         // Cliente
-                        Select::make('cliente_id')
-                            ->relationship('cliente', 'cliente_name')
+                        Select::make('user_id')
+                            ->relationship('user', 'name')
                             ->columnSpan(1)
                             ->disabled(),
 
