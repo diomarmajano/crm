@@ -2,20 +2,27 @@
 
 namespace App\Filament\Pages;
 
+use App\Models\Inventory;
 use App\Models\Items;
 use App\Models\Pedido;
 use App\Models\Pedidos;
 use App\Models\Services;
 use BackedEnum;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Filament\Actions\Action;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Schemas\Components\Section as ComponentsSection;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class PosVenta extends Page implements HasForms
 {
@@ -41,7 +48,12 @@ class PosVenta extends Page implements HasForms
 
     public function mount()
     {
-        $this->form->fill();
+        $this->form->fill([
+            'total_carrito' => 0,
+            'medio_pago' => 'efectivo',
+            'paga_con' => 0,
+            'vuelto' => 0,
+        ]);
     }
 
     // Definimos el formulario del Cliente (Usamos componentes de Filament)
@@ -49,6 +61,10 @@ class PosVenta extends Page implements HasForms
     {
         return $form
             ->schema([
+                Hidden::make('total_carrito')
+                    ->default(0)
+                    ->dehydrated(false),
+
                 ComponentsSection::make('Datos del pago')
                     ->schema([
                         Select::make('medio_pago')
@@ -59,12 +75,83 @@ class PosVenta extends Page implements HasForms
                                 'transbank' => 'Transbank',
                                 'otro' => 'Otro',
                             ])
+                            ->default('efectivo')
+                            ->live()
                             ->native(false), // Para que se vea con el estilo de Filament
                     ])
                     ->columns(1),
 
+                ComponentsSection::make('Finalizar Venta')
+                    ->schema([
+                        TextInput::make('paga_con')
+                            ->label('Paga con')
+                            ->prefix('$')
+                            ->numeric()
+                            ->live(debounce: 500) // Se calcula cuando sales del campo o escribes
+                            ->afterStateUpdated(function (Get $get, Set $set, ?string $state) {
+                                // 1. Obtenemos el total del campo oculto
+                                $total = (float) $get('total_carrito');
+                                $pago = (float) $state;
+
+                                // 2. Calculamos el vuelto
+                                $set('vuelto', $pago - $total);
+                            }),
+
+                        TextInput::make('vuelto')
+                            ->label('Vuelto')
+                            ->prefix('$')
+                            ->readOnly()
+                            ->extraInputAttributes(['style' => 'font-weight: bold; color: green; font-size: 1.2em']),
+                    ]),
             ])
             ->statePath('data');
+    }
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            Action::make('addManualItem')
+                ->label('Agregar producto')
+                ->icon('heroicon-m-plus-circle')
+                ->color('primary') // Un color diferente para destacar
+                ->form([
+                    TextInput::make('nombre')
+                        ->label('Descripción del Producto')
+                        ->required()
+                        ->placeholder('Ej: Pan 0.5kg'),
+
+                    TextInput::make('precio')
+                        ->label('Precio Total')
+                        ->prefix('$')
+                        ->numeric()
+                        ->required(),
+
+                    TextInput::make('cantidad')
+                        ->label('Cantidad')
+                        ->numeric()
+                        ->default(1)
+                        ->required(),
+                ])
+                ->action(function (array $data) {
+                    // Generamos un ID temporal único para el array
+                    $tempId = 'manual_'.Str::uuid();
+
+                    $this->cart[$tempId] = [
+                        'id' => null, // Es null porque no existe en la tabla services
+                        'nombre' => $data['nombre'].' (Manual)',
+                        'precio' => $data['precio'], // Asumimos que ingresan el precio unitario
+                        'cantidad' => $data['cantidad'],
+                        'is_manual' => true, // Bandera para identificarlo luego
+                    ];
+
+                    $this->calculateTotal();
+
+                    Notification::make()
+                        ->title('Item manual agregado')
+                        ->success()
+                        ->send();
+                }),
+        ];
     }
 
     // Obtener los servicios para mostrarlos en la vista
@@ -77,8 +164,13 @@ class PosVenta extends Page implements HasForms
         $services = Services::query()
             ->where('is_active', true) // Mantén esto si solo quieres ver los activos
             ->when($this->search, function ($query) {
-                // Si hay algo en $search, aplica este filtro
-                $query->where('service_name', 'like', '%'.$this->search.'%');
+                $query->where(function ($subQuery) {
+                    $term = '%'.$this->search.'%';
+
+                    $subQuery->where('service_name', 'like', $term)
+                        ->orWhere('sku', 'like', $term)    // <--- Asegúrate que tu columna se llame 'sku'
+                        ->orWhere('codigo', 'like', $term); // <--- O 'code', 'barcode', según tu tabla
+                });
             })
             ->get(); // Ejecuta la consulta
 
@@ -127,6 +219,14 @@ class PosVenta extends Page implements HasForms
         $this->total = array_reduce($this->cart, function ($carry, $item) {
             return $carry + ($item['precio'] * $item['cantidad']);
         }, 0);
+
+        $this->data['total_carrito'] = $this->total;
+
+        // 3. NUEVO: Si el usuario ya escribió con cuánto paga, actualizamos el vuelto automáticamente
+        if (isset($this->data['paga_con']) && is_numeric($this->data['paga_con'])) {
+            $pago = (float) $this->data['paga_con'];
+            $this->data['vuelto'] = $pago - $this->total;
+        }
     }
 
     // FINALIZAR PEDIDO
@@ -139,9 +239,27 @@ class PosVenta extends Page implements HasForms
 
             return;
         }
+        // --- 1. VALIDACIÓN PREVIA DE STOCK  ---
+        foreach ($this->cart as $item) {
+            // Buscamos el inventario del servicio
 
-        // EL CAMBIO ESTÁ AQUÍ:
-        // Asignamos a $pedidoCreado el resultado (return) de la transacción
+            if (! empty($item['id'])) {
+                $inventario = Inventory::where('id_service', $item['id'])->first();
+
+                // Si no existe registro de inventario o el stock es menor a lo que piden
+                if (! $inventario || $inventario->stock_producto < $item['cantidad']) {
+                    Notification::make()
+                        ->title('Stock insuficiente')
+                        ->body("El producto '{$item['nombre']}' solo tiene {$inventario->stock_producto} unidades.")
+                        ->danger()
+                        ->send();
+
+                    return; // Detenemos la venta aquí
+                }
+            }
+        }
+        // ------------------------------------------------------------------
+
         $pedidoCreado = DB::transaction(function () use ($data) {
 
             // 2. Crear el Pedido
@@ -163,6 +281,18 @@ class PosVenta extends Page implements HasForms
                     'subtotal' => $item['precio'] * $item['cantidad'],
                     'tenant_id' => $pedido->tenant_id,
                 ]);
+
+                // B. Descontar del Inventario // <--- AQUÍ ESTÁ LA MAGIA
+                // Buscamos el registro usando id_service (según tu estructura anterior)
+                $inventario = Inventory::where('id_service', $item['id'])->first();
+
+                if (! empty($item['id'])) {
+                    $inventario = Inventory::where('id_service', $item['id'])->first();
+                    if ($inventario) {
+                        $inventario->decrement('stock_producto', $item['cantidad']);
+                    }
+                }
+
             }
 
             // RETORNAMOS EL OBJETO PEDIDO PARA QUE SALGA DE LA TRANSACCIÓN
@@ -184,5 +314,46 @@ class PosVenta extends Page implements HasForms
         //     // Asegúrate de que la ruta de la vista sea correcta ('pdf.boleta' o 'ventas.invoice')
         //     echo Pdf::loadView('pdf.boleta', ['venta' => $pedidoCreado])->stream();
         // }, "venta-{$pedidoCreado->id}.pdf");
+    }
+
+    public function scanBarcode()
+    {
+        // 1. Si el input está vacío, no hacemos nada
+        if (empty($this->search)) {
+            return;
+        }
+
+        // 2. Buscamos coincidencia EXACTA por SKU o Código
+        // Ajusta los nombres de columna 'sku' o 'codigo_barra' según tu BD
+        $service = Services::where('is_active', true)
+            ->where(function ($query) {
+                $query->where('sku', $this->search)
+                    ->orWhere('codigo', $this->search);
+            })
+            ->first();
+
+        // 3. Si encontramos el producto exacto
+        if ($service) {
+            // Agregamos al carrito usando tu función existente
+            $this->addToCart($service->id);
+
+            // Limpiamos el buscador para el siguiente escaneo
+            $this->search = '';
+
+            // Opcional: Notificación discreta (Toast)
+            Notification::make()
+                ->title("{$service->service_name} agregado")
+                ->success()
+                ->duration(1500) // Duración corta para no molestar
+                ->send();
+        } else {
+            // 4. Si NO es exacto, quizás el usuario escribió un nombre manual.
+            // No borramos el search, dejamos que el filtro visual (getViewData) haga su trabajo.
+            // Opcional: Mandar alerta de "Código no encontrado" si prefieres.
+            Notification::make()
+                ->title('Producto no encontrado')
+                ->warning()
+                ->send();
+        }
     }
 }
