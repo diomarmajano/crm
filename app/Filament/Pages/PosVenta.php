@@ -53,8 +53,6 @@ class PosVenta extends Page implements HasForms
         $this->form->fill([
             'total_carrito' => 0,
             'medio_pago' => 'efectivo',
-            'paga_con' => 0,
-            'vuelto' => 0,
         ]);
     }
 
@@ -89,18 +87,26 @@ class PosVenta extends Page implements HasForms
                             ->label('Paga con')
                             ->prefix('$')
                             ->numeric()
+                            ->placeholder('Agregar monto...')
                             ->live(debounce: 500) // Se calcula cuando sales del campo o escribes
                             ->afterStateUpdated(function (Get $get, Set $set, ?string $state) {
-                                // 1. Obtenemos el total del campo oculto
+                                // 1. Si el campo está vacío o es nulo, dejamos el vuelto vacío
+                                if (blank($state)) {
+                                    $set('vuelto', null);
+
+                                    return;
+                                }
+
+                                // 2. Si hay un valor, realizamos el cálculo
                                 $total = (float) $get('total_carrito');
                                 $pago = (float) $state;
 
-                                // 2. Calculamos el vuelto
                                 $set('vuelto', $pago - $total);
                             }),
 
                         TextInput::make('vuelto')
                             ->label('Vuelto')
+                            ->default(null)
                             ->prefix('$')
                             ->readOnly()
                             ->extraInputAttributes(['style' => 'font-weight: bold; color: green; font-size: 1.2em']),

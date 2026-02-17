@@ -15,7 +15,7 @@ class UsersTable
         return $table
             ->columns([
                 TextColumn::make('tenant.name')
-                    ->label('Lavandería')
+                    ->label('Sucursal')
                     ->sortable()
                     ->searchable()
                     ->badge()
