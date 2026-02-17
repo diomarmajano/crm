@@ -21,6 +21,7 @@ use Filament\Schemas\Components\Section as ComponentsSection;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Support\Icons\Heroicon;
+use Filament\Support\RawJs;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Mike42\Escpos\PrintConnectors\WindowsPrintConnector;
@@ -131,6 +132,8 @@ class PosVenta extends Page implements HasForms
                     TextInput::make('precio')
                         ->label('Precio Total')
                         ->prefix('$')
+                        ->mask(RawJs::make('$money($input)'))
+                        ->stripCharacters(',')
                         ->numeric()
                         ->required(),
 
@@ -287,7 +290,7 @@ class PosVenta extends Page implements HasForms
                     'cantidad' => $item['cantidad'],
                     'precio_unitario' => $item['precio'],
                     'subtotal' => $item['precio'] * $item['cantidad'],
-                    'tenant_id' => $pedido->tenant_id
+                    'tenant_id' => $pedido->tenant_id,
                 ]);
 
                 // B. Descontar del Inventario // <--- AQUÍ ESTÁ LA MAGIA
@@ -308,20 +311,20 @@ class PosVenta extends Page implements HasForms
         });
 
         // --- IMPRESIÓN (Lógica Agregada) ---
-    
-    // Obtenemos el monto con el que paga (asumiendo que viene del form, si no es efectivo es igual al total)
-    $montoPagado = $data['paga_con'] ?? $this->total; 
-    
-    // Si no definieron 'paga_con' y es efectivo, asumimos pago exacto para evitar errores, 
-    // o puedes forzar que sea 0.
-    if($data['medio_pago'] !== 'efectivo') {
-        $montoPagado = $this->total;
-    }
 
-    $vuelto = $montoPagado - $this->total;
+        // Obtenemos el monto con el que paga (asumiendo que viene del form, si no es efectivo es igual al total)
+        $montoPagado = $data['paga_con'] ?? $this->total;
 
-    // Llamamos a la función de imprimir pasando el objeto Pedido recién creado
-    $this->imprimirBoleta($pedidoCreado, $montoPagado, $vuelto);
+        // Si no definieron 'paga_con' y es efectivo, asumimos pago exacto para evitar errores,
+        // o puedes forzar que sea 0.
+        if ($data['medio_pago'] !== 'efectivo') {
+            $montoPagado = $this->total;
+        }
+
+        $vuelto = $montoPagado - $this->total;
+
+        // Llamamos a la función de imprimir pasando el objeto Pedido recién creado
+        $this->imprimirBoleta($pedidoCreado, $montoPagado, $vuelto);
 
         // Limpiar y Notificar
         $this->cart = [];
@@ -329,9 +332,6 @@ class PosVenta extends Page implements HasForms
         $this->form->fill();
 
         Notification::make()->title('Venta realizada con éxito')->success()->send();
-
-
-
 
         // AHORA $pedidoCreado YA TIENE DATOS (NO ES NULL)
         // Asegúrate que las relaciones 'cliente' e 'items' existan en el modelo Pedidos
@@ -384,94 +384,94 @@ class PosVenta extends Page implements HasForms
         }
     }
 
+    private function imprimirBoleta($pedido, $montoPagado, $vuelto)
+    {
+        try {
+            $pedido->load('items');
 
-private function imprimirBoleta($pedido, $montoPagado, $vuelto)
-{
-    try {
-        $pedido->load('items');
+            $nombreTienda = 'Almacen';
+            // 1. Inicializamos con un valor por defecto para evitar error si no hay tenant
 
-        // 1. Inicializamos con un valor por defecto para evitar error si no hay tenant
+            if ($pedido->tenant_id) {
+                $tenantName = DB::table('tenants')
+                    ->where('id', $pedido->tenant_id)
+                    ->value('name');
 
-        if ($pedido->tenant_id) {
-            $tenantName = DB::table('tenants')
-                ->where('id', $pedido->tenant_id)
-                ->value('name');
-
-            if ($tenantName) {
-                $nombreTienda = strtoupper($tenantName);
+                if ($tenantName) {
+                    $nombreTienda = strtoupper($tenantName);
+                }
             }
+
+            $connector = new WindowsPrintConnector('XP-58');
+            $printer = new Printer($connector);
+
+            // --- ENCABEZADO ---
+            $printer->setJustification(Printer::JUSTIFY_CENTER);
+            $printer->setTextSize(2, 2);
+            $printer->text($nombreTienda."\n");
+            $printer->setTextSize(1, 1);
+            $printer->text('Boleta N° '.$pedido->id."\n");
+            $printer->text($pedido->created_at->format('d-m-Y H:i:s')."\n");
+            $printer->text("-----------------------------\n");
+
+            // --- ITEMS DEL PEDIDO (DISEÑO MODIFICADO) ---
+            $printer->setJustification(Printer::JUSTIFY_LEFT);
+
+            // Encabezado de columnas pequeño (Opcional, ayuda a entender)
+            // $printer->text("Prod           Cant x Unit    Total\n");
+            // $printer->text("-----------------------------\n");
+
+            foreach ($pedido->items as $item) {
+                $nombre = $item->nombre_servicio;
+                $cantidad = $item->cantidad;
+                $precioUnitario = $item->precio_unitario;
+                $subtotal = $precioUnitario * $cantidad;
+
+                // LÍNEA 1: Nombre del producto completo (o cortado a 32 chars)
+                // Esto asegura que el nombre se lea bien
+                $printer->text(substr($nombre, 0, 32)."\n");
+
+                // LÍNEA 2: Cantidad x Precio Unitario ...... Total
+                // Formato: "2 x $1.000"
+                $detalleMatematico = $cantidad.' x $'.number_format($precioUnitario, 0, ',', '.');
+
+                // Formato: "$2.000"
+                $detalleTotal = '$'.number_format($subtotal, 0, ',', '.');
+
+                // Cálculo de espaciado para alinear a la derecha (Ancho aprox 32 chars en 58mm)
+                // Ponemos el detalle a la izquierda (20 espacios) y el total a la derecha (12 espacios)
+                $linea = str_pad($detalleMatematico, 20).str_pad($detalleTotal, 12, ' ', STR_PAD_LEFT);
+
+                $printer->text($linea."\n");
+            }
+
+            // --- TOTALES ---
+            $printer->text("-----------------------------\n");
+            $printer->setJustification(Printer::JUSTIFY_RIGHT);
+            $printer->setTextSize(1, 1); // Aseguramos tamaño normal
+            $printer->text('Total: $'.number_format($pedido->total_pedido, 0, ',', '.')."\n");
+            $printer->text('Medio: '.ucfirst($pedido->medio_pago)."\n");
+
+            if (strtolower($pedido->medio_pago) === 'efectivo') {
+                $printer->text('Entregado: $'.number_format($montoPagado, 0, ',', '.')."\n");
+                $printer->text('Vuelto: $'.number_format($vuelto, 0, ',', '.')."\n");
+            }
+
+            // --- PIE DE PÁGINA ---
+            $printer->feed(2);
+            $printer->setJustification(Printer::JUSTIFY_CENTER);
+            $printer->text("¡Gracias por su preferencia!\n");
+
+            $printer->feed(3);
+            $printer->cut();
+            $printer->close();
+
+        } catch (\Exception $e) {
+            Notification::make()
+                ->title('Error al imprimir')
+                // ->body($e->getMessage())
+                ->danger()
+                ->send();
         }
-
-        $connector = new WindowsPrintConnector("XP-58");
-        $printer = new Printer($connector);
-
-        // --- ENCABEZADO ---
-        $printer->setJustification(Printer::JUSTIFY_CENTER);
-        $printer->setTextSize(2, 2);
-        $printer->text($nombreTienda . "\n");
-        $printer->setTextSize(1, 1);
-        $printer->text("Boleta N° " . $pedido->id . "\n");
-        $printer->text($pedido->created_at->format("d-m-Y H:i:s") . "\n");
-        $printer->text("-----------------------------\n");
-
-        // --- ITEMS DEL PEDIDO (DISEÑO MODIFICADO) ---
-        $printer->setJustification(Printer::JUSTIFY_LEFT);
-        
-        // Encabezado de columnas pequeño (Opcional, ayuda a entender)
-        // $printer->text("Prod           Cant x Unit    Total\n");
-        // $printer->text("-----------------------------\n");
-
-        foreach ($pedido->items as $item) {
-            $nombre = $item->nombre_servicio;
-            $cantidad = $item->cantidad;
-            $precioUnitario = $item->precio_unitario;
-            $subtotal = $precioUnitario * $cantidad;
-
-            // LÍNEA 1: Nombre del producto completo (o cortado a 32 chars)
-            // Esto asegura que el nombre se lea bien
-            $printer->text(substr($nombre, 0, 32) . "\n");
-
-            // LÍNEA 2: Cantidad x Precio Unitario ...... Total
-            // Formato: "2 x $1.000"
-            $detalleMatematico = $cantidad . " x $" . number_format($precioUnitario, 0, ',', '.');
-            
-            // Formato: "$2.000"
-            $detalleTotal = "$" . number_format($subtotal, 0, ',', '.');
-
-            // Cálculo de espaciado para alinear a la derecha (Ancho aprox 32 chars en 58mm)
-            // Ponemos el detalle a la izquierda (20 espacios) y el total a la derecha (12 espacios)
-            $linea = str_pad($detalleMatematico, 20) . str_pad($detalleTotal, 12, ' ', STR_PAD_LEFT);
-
-            $printer->text($linea . "\n");
-        }
-
-        // --- TOTALES ---
-        $printer->text("-----------------------------\n");
-        $printer->setJustification(Printer::JUSTIFY_RIGHT);
-        $printer->setTextSize(1, 1); // Aseguramos tamaño normal
-        $printer->text("Total: $" . number_format($pedido->total_pedido, 0, ',', '.') . "\n");
-        $printer->text("Medio: " . ucfirst($pedido->medio_pago) . "\n");
-
-        if (strtolower($pedido->medio_pago) === "efectivo") {
-            $printer->text("Entregado: $" . number_format($montoPagado, 0, ',', '.') . "\n");
-            $printer->text("Vuelto: $" . number_format($vuelto, 0, ',', '.') . "\n");
-        }
-
-        // --- PIE DE PÁGINA ---
-        $printer->feed(2);
-        $printer->setJustification(Printer::JUSTIFY_CENTER);
-        $printer->text("¡Gracias por su preferencia!\n");
-
-        $printer->feed(3);
-        $printer->cut();
-        $printer->close();
-
-    } catch (\Exception $e) {
-        Notification::make()
-            ->title('Error al imprimir')
-            ->body($e->getMessage())
-            ->danger()
-            ->send();
     }
-}
 }
