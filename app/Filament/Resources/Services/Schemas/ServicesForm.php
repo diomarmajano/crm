@@ -28,7 +28,8 @@ class ServicesForm
 
                 Select::make('id_category')
                     ->label('Categoría')
-                    ->options(Category::all()->pluck('nombre_categoria', 'id')),
+                    ->options(Category::all()->pluck('nombre_categoria', 'id'))
+                    ->required(),
 
                 TextInput::make('service_precio')
                     ->label('Precio')
