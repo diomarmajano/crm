@@ -2,13 +2,10 @@
 
 namespace App\Filament\Pages;
 
-use App\Models\Inventory;
-use App\Models\Items;
-use App\Models\Pedido;
-use App\Models\Pedidos;
 use App\Models\Services;
+use App\Utilities\PosService;
+use App\Utilities\TicketPrinterService;
 use BackedEnum;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
@@ -22,10 +19,7 @@ use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Support\Icons\Heroicon;
 use Filament\Support\RawJs;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
-use Mike42\Escpos\PrintConnectors\WindowsPrintConnector;
-use Mike42\Escpos\Printer;
 
 class PosVenta extends Page implements HasForms
 {
@@ -47,6 +41,7 @@ class PosVenta extends Page implements HasForms
     // Variables del Cliente (Formulario)
     public $data = [];
 
+    // variable para la busqueda de productos
     public $search = '';
 
     public function mount()
@@ -57,7 +52,7 @@ class PosVenta extends Page implements HasForms
         ]);
     }
 
-    // Definimos el formulario del Cliente (Usamos componentes de Filament)
+    // Formulario para datos del carrito
     public function form($form)
     {
         return $form
@@ -78,7 +73,7 @@ class PosVenta extends Page implements HasForms
                             ])
                             ->default('efectivo')
                             ->live()
-                            ->native(false), // Para que se vea con el estilo de Filament
+                            ->native(false),
                     ])
                     ->columns(1),
 
@@ -91,13 +86,11 @@ class PosVenta extends Page implements HasForms
                             ->placeholder('Agregar monto...')
                             ->live(debounce: 500) // Se calcula cuando sales del campo o escribes
                             ->afterStateUpdated(function (Get $get, Set $set, ?string $state) {
-                                // 1. Si el campo está vacío o es nulo, dejamos el vuelto vacío
                                 if (blank($state)) {
                                     $set('vuelto', null);
 
                                     return;
                                 }
-
                                 // 2. Si hay un valor, realizamos el cálculo
                                 $total = (float) $get('total_carrito');
                                 $pago = (float) $state;
@@ -122,7 +115,7 @@ class PosVenta extends Page implements HasForms
             Action::make('addManualItem')
                 ->label('Agregar producto')
                 ->icon('heroicon-m-plus-circle')
-                ->color('primary') // Un color diferente para destacar
+                ->color('primary')
                 ->form([
                     TextInput::make('nombre')
                         ->label('Descripción del Producto')
@@ -165,13 +158,8 @@ class PosVenta extends Page implements HasForms
         ];
     }
 
-    // Obtener los servicios para mostrarlos en la vista
     public function getViewData(): array
     {
-        // return [
-        //     'services' => Services::all(),
-        // ];
-
         $services = Services::query()
             ->where('is_active', true) // Mantén esto si solo quieres ver los activos
             ->when($this->search, function ($query) {
@@ -240,107 +228,52 @@ class PosVenta extends Page implements HasForms
         }
     }
 
-    // FINALIZAR PEDIDO
-    public function createOrder()
+    public function createOrder(PosService $posService, TicketPrinterService $printerService)
     {
         $data = $this->form->getState();
 
         if (empty($this->cart)) {
-            Notification::make()->title('El carrito está vacío')->warning()->send();
+            Notification::make()->title('Carrito vacío')->warning()->send();
 
             return;
         }
-        // --- 1. VALIDACIÓN PREVIA DE STOCK  ---
-        foreach ($this->cart as $item) {
-            // Buscamos el inventario del servicio
 
-            if (! empty($item['id'])) {
-                $inventario = Inventory::where('id_service', $item['id'])->first();
+        try {
+            // 1. Delegamos la lógica de negocio al Servicio
+            $pedido = $posService->crearPedido(
+                $this->cart,
+                $data,
+                $this->total,
+                auth()->id(),
+                auth()->user()->tenant_id ?? null
+            );
 
-                // Si no existe registro de inventario o el stock es menor a lo que piden
-                if (! $inventario || $inventario->stock_producto < $item['cantidad']) {
-                    Notification::make()
-                        ->title('Stock insuficiente')
-                        ->body("El producto '{$item['nombre']}' solo tiene {$inventario->stock_producto} unidades.")
-                        ->danger()
-                        ->send();
+            // 2. Cálculos visuales para impresión
+            $montoPagado = ($data['medio_pago'] === 'efectivo') ? ($data['paga_con'] ?? $this->total) : $this->total;
+            $vuelto = $montoPagado - $this->total;
 
-                    return; // Detenemos la venta aquí
-                }
-            }
-        }
-        // ------------------------------------------------------------------
+            // 3. Delegamos la impresión
+            $printerService->imprimir($pedido, $montoPagado, $vuelto);
 
-        $pedidoCreado = DB::transaction(function () use ($data) {
-
-            // 2. Crear el Pedido
-            $pedido = Pedidos::create([
-                'user_id' => auth()->id(),
-                'total_pedido' => $this->total,
-                'medio_pago' => $data['medio_pago'],
-                'tenant_id' => auth()->user()->tenant_id ?? null,
+            // 4. Limpieza UI
+            $this->cart = [];
+            $this->total = 0;
+            $this->form->fill([
+                'total_carrito' => 0,
+                'paga_con' => null,
+                'vuelto' => null,
             ]);
 
-            // 3. Crear los Items
-            foreach ($this->cart as $item) {
-                Items::create([
-                    'pedido_id' => $pedido->id,
-                    'servicio_id' => $item['id'],
-                    'nombre_servicio' => $item['nombre'],
-                    'cantidad' => $item['cantidad'],
-                    'precio_unitario' => $item['precio'],
-                    'subtotal' => $item['precio'] * $item['cantidad'],
-                    'tenant_id' => $pedido->tenant_id,
-                ]);
+            Notification::make()->title('Venta exitosa')->success()->send();
 
-                // B. Descontar del Inventario // <--- AQUÍ ESTÁ LA MAGIA
-                // Buscamos el registro usando id_service (según tu estructura anterior)
-                $inventario = Inventory::where('id_service', $item['id'])->first();
-
-                if (! empty($item['id'])) {
-                    $inventario = Inventory::where('id_service', $item['id'])->first();
-                    if ($inventario) {
-                        $inventario->decrement('stock_producto', $item['cantidad']);
-                    }
-                }
-
-            }
-
-            // RETORNAMOS EL OBJETO PEDIDO PARA QUE SALGA DE LA TRANSACCIÓN
-            return $pedido;
-        });
-
-        // --- IMPRESIÓN (Lógica Agregada) ---
-
-        // Obtenemos el monto con el que paga (asumiendo que viene del form, si no es efectivo es igual al total)
-        $montoPagado = $data['paga_con'] ?? $this->total;
-
-        // Si no definieron 'paga_con' y es efectivo, asumimos pago exacto para evitar errores,
-        // o puedes forzar que sea 0.
-        if ($data['medio_pago'] !== 'efectivo') {
-            $montoPagado = $this->total;
+        } catch (\Exception $e) {
+            // Capturamos errores de stock o de impresión
+            Notification::make()
+                ->title('Error en la venta')
+                ->body($e->getMessage())
+                ->danger()
+                ->send();
         }
-
-        $vuelto = $montoPagado - $this->total;
-
-        // Llamamos a la función de imprimir pasando el objeto Pedido recién creado
-        $this->imprimirBoleta($pedidoCreado, $montoPagado, $vuelto);
-
-        // Limpiar y Notificar
-        $this->cart = [];
-        $this->total = 0;
-        $this->form->fill();
-
-        Notification::make()->title('Venta realizada con éxito')->success()->send();
-
-        // AHORA $pedidoCreado YA TIENE DATOS (NO ES NULL)
-        // Asegúrate que las relaciones 'cliente' e 'items' existan en el modelo Pedidos
-        // $pedidoCreado->load(['cliente', 'items']);
-
-        // return response()->streamDownload(function () use ($pedidoCreado) {
-        //     // Asegúrate de que la ruta de la vista sea correcta ('pdf.boleta' o 'ventas.invoice')
-        //     echo Pdf::loadView('pdf.boleta', ['venta' => $pedidoCreado])->stream();
-        // }, "venta-{$pedidoCreado->id}.pdf");
     }
 
     public function scanBarcode()
@@ -383,95 +316,197 @@ class PosVenta extends Page implements HasForms
                 ->send();
         }
     }
+    // FINALIZAR PEDIDO
+    // public function createOrder()
+    // {
+    //     $data = $this->form->getState();
 
-    private function imprimirBoleta($pedido, $montoPagado, $vuelto)
-    {
-        try {
-            $pedido->load('items');
+    //     if (empty($this->cart)) {
+    //         Notification::make()->title('El carrito está vacío')->warning()->send();
 
-            $nombreTienda = 'Almacen';
-            // 1. Inicializamos con un valor por defecto para evitar error si no hay tenant
+    //         return;
+    //     }
+    //     // --- 1. VALIDACIÓN PREVIA DE STOCK  ---
+    //     foreach ($this->cart as $item) {
+    //         // Buscamos el inventario del servicio
 
-            if ($pedido->tenant_id) {
-                $tenantName = DB::table('tenants')
-                    ->where('id', $pedido->tenant_id)
-                    ->value('name');
+    //         if (! empty($item['id'])) {
+    //             $inventario = Inventory::where('id_service', $item['id'])->first();
 
-                if ($tenantName) {
-                    $nombreTienda = strtoupper($tenantName);
-                }
-            }
+    //             // Si no existe registro de inventario o el stock es menor a lo que piden
+    //             if (! $inventario || $inventario->stock_producto < $item['cantidad']) {
+    //                 Notification::make()
+    //                     ->title('Stock insuficiente')
+    //                     ->body("El producto '{$item['nombre']}' solo tiene {$inventario->stock_producto} unidades.")
+    //                     ->danger()
+    //                     ->send();
 
-            $connector = new WindowsPrintConnector('XP-58');
-            $printer = new Printer($connector);
+    //                 return; // Detenemos la venta aquí
+    //             }
+    //         }
+    //     }
+    //     // ------------------------------------------------------------------
 
-            // --- ENCABEZADO ---
-            $printer->setJustification(Printer::JUSTIFY_CENTER);
-            $printer->setTextSize(2, 2);
-            $printer->text($nombreTienda."\n");
-            $printer->setTextSize(1, 1);
-            $printer->text('Boleta N° '.$pedido->id."\n");
-            $printer->text($pedido->created_at->format('d-m-Y H:i:s')."\n");
-            $printer->text("-----------------------------\n");
+    //     $pedidoCreado = DB::transaction(function () use ($data) {
 
-            // --- ITEMS DEL PEDIDO (DISEÑO MODIFICADO) ---
-            $printer->setJustification(Printer::JUSTIFY_LEFT);
+    //         // 2. Crear el Pedido
+    //         $pedido = Pedidos::create([
+    //             'user_id' => auth()->id(),
+    //             'total_pedido' => $this->total,
+    //             'medio_pago' => $data['medio_pago'],
+    //             'tenant_id' => auth()->user()->tenant_id ?? null,
+    //         ]);
 
-            // Encabezado de columnas pequeño (Opcional, ayuda a entender)
-            // $printer->text("Prod           Cant x Unit    Total\n");
-            // $printer->text("-----------------------------\n");
+    //         // 3. Crear los Items
+    //         foreach ($this->cart as $item) {
+    //             Items::create([
+    //                 'pedido_id' => $pedido->id,
+    //                 'servicio_id' => $item['id'],
+    //                 'nombre_servicio' => $item['nombre'],
+    //                 'cantidad' => $item['cantidad'],
+    //                 'precio_unitario' => $item['precio'],
+    //                 'subtotal' => $item['precio'] * $item['cantidad'],
+    //                 'tenant_id' => $pedido->tenant_id,
+    //             ]);
 
-            foreach ($pedido->items as $item) {
-                $nombre = $item->nombre_servicio;
-                $cantidad = $item->cantidad;
-                $precioUnitario = $item->precio_unitario;
-                $subtotal = $precioUnitario * $cantidad;
+    //             // B. Descontar del Inventario // <--- AQUÍ ESTÁ LA MAGIA
+    //             // Buscamos el registro usando id_service (según tu estructura anterior)
+    //             $inventario = Inventory::where('id_service', $item['id'])->first();
 
-                // LÍNEA 1: Nombre del producto completo (o cortado a 32 chars)
-                // Esto asegura que el nombre se lea bien
-                $printer->text(substr($nombre, 0, 32)."\n");
+    //             if (! empty($item['id'])) {
+    //                 $inventario = Inventory::where('id_service', $item['id'])->first();
+    //                 if ($inventario) {
+    //                     $inventario->decrement('stock_producto', $item['cantidad']);
+    //                 }
+    //             }
 
-                // LÍNEA 2: Cantidad x Precio Unitario ...... Total
-                // Formato: "2 x $1.000"
-                $detalleMatematico = $cantidad.' x $'.number_format($precioUnitario, 0, ',', '.');
+    //         }
 
-                // Formato: "$2.000"
-                $detalleTotal = '$'.number_format($subtotal, 0, ',', '.');
+    //         // RETORNAMOS EL OBJETO PEDIDO PARA QUE SALGA DE LA TRANSACCIÓN
+    //         return $pedido;
+    //     });
 
-                // Cálculo de espaciado para alinear a la derecha (Ancho aprox 32 chars en 58mm)
-                // Ponemos el detalle a la izquierda (20 espacios) y el total a la derecha (12 espacios)
-                $linea = str_pad($detalleMatematico, 20).str_pad($detalleTotal, 12, ' ', STR_PAD_LEFT);
+    //     // --- IMPRESIÓN (Lógica Agregada) ---
 
-                $printer->text($linea."\n");
-            }
+    //     // Obtenemos el monto con el que paga (asumiendo que viene del form, si no es efectivo es igual al total)
+    //     $montoPagado = $data['paga_con'] ?? $this->total;
 
-            // --- TOTALES ---
-            $printer->text("-----------------------------\n");
-            $printer->setJustification(Printer::JUSTIFY_RIGHT);
-            $printer->setTextSize(1, 1); // Aseguramos tamaño normal
-            $printer->text('Total: $'.number_format($pedido->total_pedido, 0, ',', '.')."\n");
-            $printer->text('Medio: '.ucfirst($pedido->medio_pago)."\n");
+    //     // Si no definieron 'paga_con' y es efectivo, asumimos pago exacto para evitar errores,
+    //     // o puedes forzar que sea 0.
+    //     if ($data['medio_pago'] !== 'efectivo') {
+    //         $montoPagado = $this->total;
+    //     }
 
-            if (strtolower($pedido->medio_pago) === 'efectivo') {
-                $printer->text('Entregado: $'.number_format($montoPagado, 0, ',', '.')."\n");
-                $printer->text('Vuelto: $'.number_format($vuelto, 0, ',', '.')."\n");
-            }
+    //     $vuelto = $montoPagado - $this->total;
 
-            // --- PIE DE PÁGINA ---
-            $printer->feed(2);
-            $printer->setJustification(Printer::JUSTIFY_CENTER);
-            $printer->text("¡Gracias por su preferencia!\n");
+    //     // Llamamos a la función de imprimir pasando el objeto Pedido recién creado
+    //     $this->imprimirBoleta($pedidoCreado, $montoPagado, $vuelto);
 
-            $printer->feed(3);
-            $printer->cut();
-            $printer->close();
+    //     // Limpiar y Notificar
+    //     $this->cart = [];
+    //     $this->total = 0;
+    //     $this->form->fill();
 
-        } catch (\Exception $e) {
-            Notification::make()
-                ->title('Error al imprimir')
-                // ->body($e->getMessage())
-                ->danger()
-                ->send();
-        }
-    }
+    //     Notification::make()->title('Venta realizada con éxito')->success()->send();
+
+    //     // AHORA $pedidoCreado YA TIENE DATOS (NO ES NULL)
+    //     // Asegúrate que las relaciones 'cliente' e 'items' existan en el modelo Pedidos
+    //     // $pedidoCreado->load(['cliente', 'items']);
+
+    //     // return response()->streamDownload(function () use ($pedidoCreado) {
+    //     //     // Asegúrate de que la ruta de la vista sea correcta ('pdf.boleta' o 'ventas.invoice')
+    //     //     echo Pdf::loadView('pdf.boleta', ['venta' => $pedidoCreado])->stream();
+    //     // }, "venta-{$pedidoCreado->id}.pdf");
+    // }
+
+    // private function imprimirBoleta($pedido, $montoPagado, $vuelto)
+    // {
+    //     try {
+    //         $pedido->load('items');
+
+    //         $nombreTienda = 'Almacen';
+    //         // 1. Inicializamos con un valor por defecto para evitar error si no hay tenant
+
+    //         if ($pedido->tenant_id) {
+    //             $tenantName = DB::table('tenants')
+    //                 ->where('id', $pedido->tenant_id)
+    //                 ->value('name');
+
+    //             if ($tenantName) {
+    //                 $nombreTienda = strtoupper($tenantName);
+    //             }
+    //         }
+
+    //         $connector = new WindowsPrintConnector('XP-58');
+    //         $printer = new Printer($connector);
+
+    //         // --- ENCABEZADO ---
+    //         $printer->setJustification(Printer::JUSTIFY_CENTER);
+    //         $printer->setTextSize(2, 2);
+    //         $printer->text($nombreTienda."\n");
+    //         $printer->setTextSize(1, 1);
+    //         $printer->text('Boleta N° '.$pedido->id."\n");
+    //         $printer->text($pedido->created_at->format('d-m-Y H:i:s')."\n");
+    //         $printer->text("-----------------------------\n");
+
+    //         // --- ITEMS DEL PEDIDO (DISEÑO MODIFICADO) ---
+    //         $printer->setJustification(Printer::JUSTIFY_LEFT);
+
+    //         // Encabezado de columnas pequeño (Opcional, ayuda a entender)
+    //         // $printer->text("Prod           Cant x Unit    Total\n");
+    //         // $printer->text("-----------------------------\n");
+
+    //         foreach ($pedido->items as $item) {
+    //             $nombre = $item->nombre_servicio;
+    //             $cantidad = $item->cantidad;
+    //             $precioUnitario = $item->precio_unitario;
+    //             $subtotal = $precioUnitario * $cantidad;
+
+    //             // LÍNEA 1: Nombre del producto completo (o cortado a 32 chars)
+    //             // Esto asegura que el nombre se lea bien
+    //             $printer->text(substr($nombre, 0, 32)."\n");
+
+    //             // LÍNEA 2: Cantidad x Precio Unitario ...... Total
+    //             // Formato: "2 x $1.000"
+    //             $detalleMatematico = $cantidad.' x $'.number_format($precioUnitario, 0, ',', '.');
+
+    //             // Formato: "$2.000"
+    //             $detalleTotal = '$'.number_format($subtotal, 0, ',', '.');
+
+    //             // Cálculo de espaciado para alinear a la derecha (Ancho aprox 32 chars en 58mm)
+    //             // Ponemos el detalle a la izquierda (20 espacios) y el total a la derecha (12 espacios)
+    //             $linea = str_pad($detalleMatematico, 20).str_pad($detalleTotal, 12, ' ', STR_PAD_LEFT);
+
+    //             $printer->text($linea."\n");
+    //         }
+
+    //         // --- TOTALES ---
+    //         $printer->text("-----------------------------\n");
+    //         $printer->setJustification(Printer::JUSTIFY_RIGHT);
+    //         $printer->setTextSize(1, 1); // Aseguramos tamaño normal
+    //         $printer->text('Total: $'.number_format($pedido->total_pedido, 0, ',', '.')."\n");
+    //         $printer->text('Medio: '.ucfirst($pedido->medio_pago)."\n");
+
+    //         if (strtolower($pedido->medio_pago) === 'efectivo') {
+    //             $printer->text('Entregado: $'.number_format($montoPagado, 0, ',', '.')."\n");
+    //             $printer->text('Vuelto: $'.number_format($vuelto, 0, ',', '.')."\n");
+    //         }
+
+    //         // --- PIE DE PÁGINA ---
+    //         $printer->feed(2);
+    //         $printer->setJustification(Printer::JUSTIFY_CENTER);
+    //         $printer->text("¡Gracias por su preferencia!\n");
+
+    //         $printer->feed(3);
+    //         $printer->cut();
+    //         $printer->close();
+
+    //     } catch (\Exception $e) {
+    //         Notification::make()
+    //             ->title('Error al imprimir')
+    //             // ->body($e->getMessage())
+    //             ->danger()
+    //             ->send();
+    //     }
+    // }
 }
