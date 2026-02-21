@@ -6,7 +6,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\DatePicker;
-use Filament\Tables\Columns\SelectColumn;
+use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Table;
@@ -34,15 +34,10 @@ class PedidosTable
                     ->iconColor('primary')
                     ->money('CLP'),
 
-                SelectColumn::make('medio_pago')
+                TextColumn::make('medio_pago')
                     ->label('Medio de Pago')
-                    ->native(false)
-                    ->options([
-                        'efectivo' => 'Efectivo',
-                        'transferencia' => 'Transferencia',
-                        'transbank' => 'Transbank',
-                        'otro' => 'Otro',
-                    ]),
+                    ->icon(Heroicon::Banknotes)
+                    ->iconColor('primary'),
 
                 TextColumn::make('created_at')
                     ->label('Fecha')

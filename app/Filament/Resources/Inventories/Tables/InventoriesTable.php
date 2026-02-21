@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Inventories\Tables;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Table;
@@ -22,18 +23,24 @@ class InventoriesTable
                     ->color('primary'),
                 TextColumn::make('stock_producto')
                     ->numeric()
-                    ->numeric()
                 // Color: Rojo (danger) si es menor/igual al mínimo, Verde (success) si está bien
                     ->color(fn ($record) => $record->stock_producto <= $record->stock_minimo ? 'danger' : 'success')
                 // Ícono: Heroicon de alerta si es bajo
                     ->icon(fn ($record) => $record->stock_producto <= $record->stock_minimo ? 'heroicon-m-exclamation-triangle' : 'heroicon-m-check-circle')
                     ->badge(),
                 TextColumn::make('stock_minimo')
-                    ->numeric(),
+                    ->numeric()
+                    ->icon(Heroicon::CheckBadge),
                 TextColumn::make('precio_compra')
-                    ->numeric(),
+                    ->numeric()
+                    ->money('clp')
+                    ->icon(Heroicon::CurrencyDollar)
+                    ->iconColor('success'),
                 TextColumn::make('precio_venta')
-                    ->numeric(),
+                    ->numeric()
+                    ->money('clp')
+                    ->icon(Heroicon::CurrencyDollar)
+                    ->iconColor('success'),
 
                 TextColumn::make('ganancia_unitaria')
                     ->label('Margen')

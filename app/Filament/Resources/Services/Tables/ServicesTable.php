@@ -8,6 +8,7 @@ use Filament\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ToggleColumn;
 use Filament\Tables\Table;
+use Illuminate\Support\Str;
 
 class ServicesTable
 {
@@ -23,7 +24,8 @@ class ServicesTable
                     ->label('Servicio')
                     ->icon('heroicon-s-cube')
                     ->iconColor('primary')
-                    ->searchable(),
+                    ->searchable()
+                    ->formatStateUsing(fn ($state) => Str::title($state)),
 
                 TextColumn::make('service_precio')
                     ->label('Precio')
