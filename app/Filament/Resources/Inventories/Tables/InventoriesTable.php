@@ -2,14 +2,19 @@
 
 namespace App\Filament\Resources\Inventories\Tables;
 
+use App\Models\InventoryMovement;
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\EditAction;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
 
 class InventoriesTable
 {
@@ -23,9 +28,7 @@ class InventoriesTable
                     ->color('primary'),
                 TextColumn::make('stock_producto')
                     ->numeric()
-                // Color: Rojo (danger) si es menor/igual al mínimo, Verde (success) si está bien
                     ->color(fn ($record) => $record->stock_producto <= $record->stock_minimo ? 'danger' : 'success')
-                // Ícono: Heroicon de alerta si es bajo
                     ->icon(fn ($record) => $record->stock_producto <= $record->stock_minimo ? 'heroicon-m-exclamation-triangle' : 'heroicon-m-check-circle')
                     ->badge(),
                 TextColumn::make('stock_minimo')
@@ -49,16 +52,14 @@ class InventoriesTable
                     })
                     ->money('clp')
                     ->badge()
-                    ->color(fn (string $state): string => $state > 0 ? 'success' : 'danger'),
-
+                    ->color(fn ($record): string => ($record->precio_venta - $record->precio_compra) > 0 ? 'success' : 'danger'),
                 // 2. Valor Total del Inventario (Costo)
-                TextColumn::make('Recaudación')
-                    ->label('Valor Stock')
-                    ->state(fn ($record) => $record->precio_venta * $record->stock_producto)
+                TextColumn::make('valor_inventario')
+                    ->label('Capital Invertido')
+                    ->state(fn ($record) => $record->precio_compra * $record->stock_producto)
                     ->money('clp')
-                    ->color('gray')
                     ->badge()
-                    ->color('success'),
+                    ->color('gray'),
 
                 // 3. Utilidad Total Estimada (Si vendes todo)
                 TextColumn::make('utilidad_total')
@@ -79,7 +80,71 @@ class InventoriesTable
                     ->toggle(), // Esto lo hace un switch on/off
             ])
             ->recordActions([
-                EditAction::make(),
+                Action::make('ajustar_stock')
+                    ->label('Ajustar Stock')
+                    ->icon('heroicon-o-arrows-right-left')
+                    ->color('warning')
+                    ->form([
+                        Select::make('tipo')
+                            ->options([
+                                'entrada' => 'Entrada (+)',
+                                'salida' => 'Salida (-)',
+                                'ajuste' => 'Ajuste por Pérdida/Merma (-)',
+                            ])
+                            ->required()
+                            ->label('Tipo de Movimiento'),
+                        TextInput::make('cantidad')
+                            ->numeric()
+                            ->minValue(1)
+                            ->required()
+                            ->label('Cantidad'),
+                        TextInput::make('motivo')
+                            ->required()
+                            ->maxLength(255)
+                            ->label('Motivo / Comentario'),
+                    ])
+                    ->action(function ($record, array $data) {
+                        DB::transaction(function () use ($record, $data) {
+                            $cantidad = (int) $data['cantidad'];
+                            $stockAnterior = $record->stock_producto;
+
+                            // Calculamos el nuevo stock dependiendo del tipo
+                            $stockNuevo = $data['tipo'] === 'entrada'
+                                ? $stockAnterior + $cantidad
+                                : $stockAnterior - $cantidad;
+
+                            // Evitar que el stock quede en negativo si es salida/ajuste
+                            if ($stockNuevo < 0) {
+                                Notification::make()
+                                    ->title('Error de validación')
+                                    ->body('No puedes restar más stock del que tienes disponible.')
+                                    ->danger()
+                                    ->send();
+
+                                throw new \Exception('Stock negativo no permitido'); // Detiene la transacción
+                            }
+
+                            // 1. Registramos el movimiento
+                            InventoryMovement::create([
+                                'inventory_id' => $record->id,
+                                'tenant_id' => $record->tenant_id,
+                                'user_id' => auth()->id(),
+                                'tipo' => $data['tipo'],
+                                'cantidad' => $cantidad,
+                                'stock_anterior' => $stockAnterior,
+                                'stock_nuevo' => $stockNuevo,
+                                'motivo' => $data['motivo'],
+                            ]);
+
+                            // 2. Actualizamos el stock principal
+                            $record->update(['stock_producto' => $stockNuevo]);
+
+                            Notification::make()
+                                ->title('Stock actualizado')
+                                ->success()
+                                ->send();
+                        });
+                    }),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

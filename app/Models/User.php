@@ -80,4 +80,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(Pedidos::class);
     }
+
+    public function movenment()
+    {
+        return $this->hasMany(InventoryMovement::class);
+    }
 }

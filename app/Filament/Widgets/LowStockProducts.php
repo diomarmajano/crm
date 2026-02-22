@@ -4,6 +4,7 @@ namespace App\Filament\Widgets;
 
 use App\Models\Inventory;
 use Filament\Actions\BulkActionGroup;
+use Filament\Tables\Columns\Layout\Stack;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget;
@@ -25,18 +26,21 @@ class LowStockProducts extends TableWidget
     {
         return $table
             ->columns([
-                TextColumn::make('service.service_name')
-                    ->label('producto')
-                    ->badge(),
+                Stack::make([
+                    TextColumn::make('service.service_name')
+                        ->label('producto'),
 
-                TextColumn::make('stock_producto')
-                    ->label('Stock Actual')
-                    ->numeric()
-                    ->badge()
-                    ->color(fn ($record) => $record->stock_producto <= $record->stock_minimo ? 'danger' : 'success')
-                    ->icon(fn ($record) => $record->stock_producto <= $record->stock_minimo ? 'heroicon-m-exclamation-triangle' : 'heroicon-m-check-circle'),
-                TextColumn::make('stock_minimo')
-                    ->numeric(),
+                    TextColumn::make('stock_producto')
+                        ->label('Stock Actual')
+                        ->numeric()
+                        ->badge()
+                        ->color(fn ($record) => $record->stock_producto <= $record->stock_minimo ? 'danger' : 'success')
+                        ->icon(fn ($record) => $record->stock_producto <= $record->stock_minimo ? 'heroicon-m-exclamation-triangle' : 'heroicon-m-check-circle'),
+
+                ]),
+            ])->contentGrid([
+                'md' => 3,
+                'xl' => 4,
             ])
             ->filters([
                 //
