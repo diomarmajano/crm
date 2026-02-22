@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignId('tenant_id')->nullable()->constrained()->cascadeOnDelete();
             $table->foreignId('id_category')->nullable()->constrained('category')->cascadeOnDelete();
             $table->boolean('is_active')->nullable();
-            $table->string('sku')->nullable()->unique();
+            $table->string('sku')->nullable();
             $table->string('codigo')->nullable();
             $table->string('service_name', 50)->nullable();
             $table->string('detalles')->nullable();

@@ -4,7 +4,7 @@ namespace App\Filament\Resources\CashShifts\RelationManagers;
 
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
-use Filament\Tables\Columns\BadgeColumn;
+use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
@@ -27,20 +27,33 @@ class MovementsRelationManager extends RelationManager
         return $table
             ->recordTitleAttribute('tipo')
             ->columns([
-                TextColumn::make('created_at')->label('Hora')->time('H:i'),
-                BadgeColumn::make('tipo')
+                TextColumn::make('created_at')->label('Hora')->time('H:i')
+                    ->icon(Heroicon::Clock)
+                    ->iconColor('primary'),
+
+                TextColumn::make('tipo')
                     ->colors([
                         'success' => 'ingreso',
                         'danger' => 'egreso',
-                    ]),
-                TextColumn::make('concepto'),
-                TextColumn::make('metodo_pago')->label('Método')->badge()->color('gray'),
-                TextColumn::make('monto')->money('clp')->weight('bold'),
+                    ])
+                    ->badge(),
+
+                TextColumn::make('concepto')
+                    ->icon(Heroicon::ListBullet)
+                    ->iconColor('primary'),
+
+                TextColumn::make('metodo_pago')
+                    ->label('Método')
+                    ->badge()
+                    ->color('primary'),
+                TextColumn::make('monto')
+                    ->money('clp')
+                    ->weight('bold')
+                    ->icon(Heroicon::CurrencyDollar)
+                    ->iconColor('primary'),
             ])
             ->defaultSort('created_at', 'desc')
             ->headerActions([]) // Solo lectura
-            ->actions([]) // Solo lectura
-            ->bulkActions([])
             ->filters([
                 //
             ])

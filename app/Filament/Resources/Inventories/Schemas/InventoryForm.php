@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Inventories\Schemas;
 
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
 use Filament\Support\RawJs;
 
@@ -17,11 +18,15 @@ class InventoryForm
                     ->label('producto')
                     ->relationship('service', 'service_name')
                     ->searchable()
-                    ->preload(),
+                    ->preload()
+                    ->hidden(fn ($livewire) => $livewire instanceof RelationManager),
                 TextInput::make('stock_producto')
                     ->required()
                     ->numeric()
-                    ->disabled(),
+                    ->disabled()
+                    ->default(0)
+                    ->disabledOn('edit')
+                    ->dehydrated(),
                 TextInput::make('stock_minimo')
                     ->required()
                     ->numeric(),
@@ -34,7 +39,16 @@ class InventoryForm
                     ->required()
                     ->numeric()
                     ->mask(RawJs::make('$money($input)'))
-                    ->stripCharacters(','),
+                    ->stripCharacters(',')
+                    ->default(function ($livewire) {
+                        // Verificamos si estamos dentro del RelationManager
+                        if ($livewire instanceof RelationManager) {
+                            // Obtenemos el producto padre y devolvemos su precio
+                            return $livewire->getOwnerRecord()->service_precio;
+                        }
+
+                        return null; // Si creas el inventario desde otro lado, queda vacío
+                    }),
             ]);
     }
 }

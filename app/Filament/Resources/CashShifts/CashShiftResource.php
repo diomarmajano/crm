@@ -13,14 +13,14 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Hidden;
-use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
-use Filament\Tables\Columns\BadgeColumn;
+use Filament\Support\RawJs;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Support\Facades\DB;
@@ -44,9 +44,10 @@ class CashShiftResource extends Resource
                 TextInput::make('saldo_inicial')
                     ->label('Efectivo Inicial en Caja (Fondo)')
                     ->required()
-                    ->numeric()
-                    ->default(0)
-                    ->prefix('$'),
+                    ->prefix('$')
+                    ->mask(RawJs::make('$money($input)'))
+                    ->stripCharacters(',')
+                    ->numeric(),
 
                 Textarea::make('observaciones')
                     ->label('Observaciones (Opcional)')
@@ -65,22 +66,36 @@ class CashShiftResource extends Resource
             ->columns([
                 TextColumn::make('fecha_apertura')
                     ->label('Apertura')
-                    ->dateTime('d/m/Y H:i'),
+                    ->dateTime('d/m/Y H:i')
+                    ->icon(Heroicon::Clock)
+                    ->iconColor('primary'),
+
                 TextColumn::make('user.name')
-                    ->label('Cajero'),
-                BadgeColumn::make('estado')
+                    ->label('Cajero')
+                    ->icon(Heroicon::User)
+                    ->iconColor('primary'),
+
+                TextColumn::make('estado')
+                    ->badge()
                     ->colors([
                         'success' => 'abierta',
                         'danger' => 'cerrada',
-                    ]),
+                    ])
+                    ->icon(Heroicon::CheckBadge)
+                    ->iconColor('primary'),
+
                 TextColumn::make('saldo_esperado')
                     ->label('Efectivo Esperado')
                     ->money('clp')
-                    ->color('success')
-                    ->weight('bold'),
+                    ->weight('bold')
+                    ->icon(Heroicon::CurrencyDollar)
+                    ->iconColor('primary'),
+
                 TextColumn::make('diferencia')
                     ->label('Descuadre')
                     ->money('clp')
+                    ->icon(Heroicon::CurrencyDollar)
+                    ->iconColor('primary')
                     ->color(fn ($state) => $state < 0 ? 'danger' : ($state > 0 ? 'warning' : 'success')),
             ])
             ->filters([
@@ -91,20 +106,21 @@ class CashShiftResource extends Resource
                     ->label('Registrar Gasto')
                     ->icon('heroicon-o-minus-circle')
                     ->color('warning')
-                    // Solo se puede registrar gastos si la caja está abierta
                     ->visible(fn (CashShift $record) => $record->estado === 'abierta')
-                    ->form([
+                    ->schema([
                         TextInput::make('monto')
                             ->required()
-                            ->numeric()
-                            ->minValue(1),
+                            ->minValue(1)
+                            ->mask(RawJs::make('$money($input)'))
+                            ->stripCharacters(',')
+                            ->numeric(),
+
                         TextInput::make('concepto')
                             ->required()
                             ->placeholder('Ej: Compra de agua, Pago proveedor...'),
                     ])
                     ->action(function (CashShift $record, array $data) {
                         DB::transaction(function () use ($record, $data) {
-                            // 1. Crear el movimiento
                             CashMovement::create([
                                 'cash_shift_id' => $record->id,
                                 'tenant_id' => $record->tenant_id,
@@ -115,7 +131,6 @@ class CashShiftResource extends Resource
                                 'concepto' => $data['concepto'],
                             ]);
 
-                            // 2. Actualizar totales de la caja
                             $record->update([
                                 'total_egresos' => $record->total_egresos + $data['monto'],
                                 'saldo_esperado' => $record->saldo_esperado - $data['monto'],
@@ -124,18 +139,18 @@ class CashShiftResource extends Resource
                         Notification::make()->title('Gasto registrado')->success()->send();
                     }),
 
-                // ACCIÓN 2: CERRAR CAJA (EL ARQUEO)
                 Action::make('cerrar_caja')
                     ->label('Cerrar Caja')
                     ->icon('heroicon-o-lock-closed')
                     ->color('danger')
                     ->visible(fn (CashShift $record) => $record->estado === 'abierta')
-                    ->form([
-                        Placeholder::make('resumen')
-                            ->content(fn (CashShift $record) => 'El sistema espera encontrar: $'.number_format($record->saldo_esperado, 0, ',', '.')),
+                    ->schema([
+                        TextEntry::make('resumen'),
                         TextInput::make('saldo_fisico')
-                            ->label('¿Cuánto efectivo hay realmente en la caja?')
+                            ->label('¿Efectivo en caja?')
                             ->required()
+                            ->mask(RawJs::make('$money($input)'))
+                            ->stripCharacters(',')
                             ->numeric()
                             ->prefix('$'),
                     ])
@@ -161,7 +176,7 @@ class CashShiftResource extends Resource
 
                 ViewAction::make()
                     ->label('Ver Historial')
-                    ->color('info'), // Para ver el historial (RelationManager)
+                    ->color('info'),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

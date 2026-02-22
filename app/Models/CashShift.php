@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\BelongsToTenant as ModelsBelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 
 class CashShift extends Model
 {
+    use ModelsBelongsToTenant;
+
     protected $guarded = [];
 
     protected $casts = [

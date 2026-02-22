@@ -139,11 +139,12 @@ class PosVenta extends Page implements HasForms
                 ->action(function (array $data) {
                     // Generamos un ID temporal único para el array
                     $tempId = 'manual_'.Str::uuid();
+                    $precioLimpio = (float) str_replace(['.', ','], '', $data['precio']);
 
                     $this->cart[$tempId] = [
                         'id' => null, // Es null porque no existe en la tabla services
                         'nombre' => $data['nombre'].' (Manual)',
-                        'precio' => $data['precio'], // Asumimos que ingresan el precio unitario
+                        'precio' => $precioLimpio, // Asumimos que ingresan el precio unitario
                         'cantidad' => $data['cantidad'],
                         'is_manual' => true, // Bandera para identificarlo luego
                     ];
@@ -161,6 +162,7 @@ class PosVenta extends Page implements HasForms
     public function getViewData(): array
     {
         $services = Services::query()
+            ->limit(20)
             ->where('is_active', true) // Mantén esto si solo quieres ver los activos
             ->when($this->search, function ($query) {
                 $query->where(function ($subQuery) {
@@ -205,12 +207,14 @@ class PosVenta extends Page implements HasForms
 
     public function updateQuantity($serviceId, $cant)
     {
-        if ($cant > 0) {
-            $this->cart[$serviceId]['cantidad'] = $cant;
-        } else {
-            $this->removeFromCart($serviceId);
+        if (isset($this->cart[$serviceId])) {
+            if ($cant > 0) {
+                $this->cart[$serviceId]['cantidad'] = $cant;
+            } else {
+                $this->removeFromCart($serviceId);
+            }
+            $this->calculateTotal();
         }
-        $this->calculateTotal();
     }
 
     public function calculateTotal()

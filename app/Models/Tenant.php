@@ -46,4 +46,24 @@ class Tenant extends Model
     {
         return $this->hasMany(Pedidos::class);
     }
+
+    public function movements()
+    {
+        return $this->hasMany(CashMovement::class);
+    }
+
+    public function cashShift()
+    {
+        return $this->hasMany(CashShift::class);
+    }
+
+    public function inventories()
+    {
+        return $this->hasMany(Inventory::class);
+    }
+
+    public function InventoryMovement()
+    {
+        return $this->hasMany(InventoryMovement::class);
+    }
 }

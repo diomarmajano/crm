@@ -17,6 +17,10 @@ class CreateTenant extends CreateRecord
         // $this->record es el Tenant recién creado
         $tenant = $this->record;
 
+        $defaultCategories = [
+            ['name' => ''],
+        ];
+
         // $defaultServices = [
         //     ['name' => 'Abrigo', 'price' => 9990, 'icon' => 'https://cdn-icons-png.flaticon.com/128/12019/12019301.png'],
         //     ['name' => 'Almohada', 'price' => 6990, 'icon' => 'https://cdn-icons-png.flaticon.com/128/4289/4289334.png'],

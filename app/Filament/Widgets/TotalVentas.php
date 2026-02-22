@@ -64,12 +64,12 @@ class TotalVentas extends StatsOverviewWidget
 
             // ESTA ES LA TARJETA MÁS IMPORTANTE AHORA
             Stat::make('Efectivo en Caja', '$'.number_format($cajaAbierta->saldo_esperado, 0, ',', '.'))
-                ->description('Incluye fondo inicial y descuenta gastos')
+                ->description('Fondo inicial y descuento de gastos')
                 ->descriptionIcon('heroicon-o-banknotes')
                 ->color('success'),
 
             Stat::make('Gastos / Retiros', '$'.number_format($cajaAbierta->total_egresos, 0, ',', '.'))
-                ->description('Dinero sacado de la caja')
+                ->description('Retiros de caja')
                 ->descriptionIcon('heroicon-o-arrow-trending-down')
                 ->color('danger'),
 

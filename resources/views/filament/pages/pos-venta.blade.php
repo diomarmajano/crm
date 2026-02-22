@@ -327,9 +327,11 @@
                                 </div>
                                 
                                 <div class="flex items-center gap-2">
-                                    <button wire:click="updateQuantity({{ $id }}, {{ $item['cantidad'] - 1 }})" class="p-1 text-gray-500 hover:text-red-500 transition font-bold text-lg leading-none flex items-center justify-center h-6 w-6">-</button>
-                                    <span class="font-bold text-sm w-4 text-center">{{ $item['cantidad'] }}</span>
-                                    <button wire:click="addToCart({{ $id }})" class="p-1 text-gray-500 hover:text-green-500 transition font-bold text-lg leading-none flex items-center justify-center h-6 w-6">+</button>
+                                    <button wire:click="updateQuantity('{{ $id }}', {{ $item['cantidad'] - 1 }})" 
+                                    class="p-1 text-gray-500 hover:text-red-500 transition font-bold text-lg leading-none flex items-center justify-center h-6 w-6">- </button>                                    
+                                            <span class="font-bold text-sm w-4 text-center">{{ $item['cantidad'] }}</span>
+                                    <button wire:click="updateQuantity('{{ $id }}', {{ $item['cantidad'] + 1 }})" 
+                                    class="p-1 text-gray-500 hover:text-green-500 transition font-bold text-lg leading-none flex items-center justify-center h-6 w-6">+</button>                                
                                 </div>
                                 
                                 <div class="text-right ml-2 font-semibold">
