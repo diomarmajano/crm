@@ -52,8 +52,7 @@ class InventoriesTable
                     })
                     ->money('clp')
                     ->badge()
-                    ->color(fn (string $state): string => $state > 0 ? 'success' : 'danger'),
-
+                    ->color(fn ($record): string => ($record->precio_venta - $record->precio_compra) > 0 ? 'success' : 'danger'),
                 // 2. Valor Total del Inventario (Costo)
                 TextColumn::make('valor_inventario')
                     ->label('Capital Invertido')

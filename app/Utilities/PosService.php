@@ -2,6 +2,8 @@
 
 namespace App\Utilities;
 
+use App\Models\CashMovement;
+use App\Models\CashShift;
 use App\Models\Inventory;
 use App\Models\InventoryMovement;
 use App\Models\Items;
@@ -79,6 +81,36 @@ class PosService
                     ]);
                 }
             }
+            $cajaAbierta = CashShift::where('tenant_id', $tenantId)
+                ->where('estado', 'abierta')
+                ->first();
+
+            if (! $cajaAbierta) {
+                throw new Exception('Debes abrir un turno de caja antes de poder registrar ventas.');
+            }
+
+            // Creamos el movimiento de ingreso de dinero
+            CashMovement::create([
+                'cash_shift_id' => $cajaAbierta->id,
+                'tenant_id' => $tenantId,
+                'user_id' => $userId,
+                'pedido_id' => $pedido->id,
+                'tipo' => 'ingreso',
+                'metodo_pago' => $formData['medio_pago'], // 'Efectivo', 'Transferencia', etc.
+                'monto' => $total,
+                'concepto' => "Venta POS - Pedido #{$pedido->id}",
+            ]);
+
+            // Actualizamos los totales del turno actual (para que el dashboard los lea rápido)
+            // Solo sumamos al "saldo_esperado" físico si el pago fue en Efectivo
+            $esEfectivo = strtolower($formData['medio_pago']) === 'efectivo';
+
+            $cajaAbierta->update([
+                'total_ingresos' => $cajaAbierta->total_ingresos + $total,
+                'saldo_esperado' => $esEfectivo
+                                    ? $cajaAbierta->saldo_esperado + $total
+                                    : $cajaAbierta->saldo_esperado,
+            ]);
 
             // Cargamos la relación items para la impresión posterior
             return $pedido->load('items');

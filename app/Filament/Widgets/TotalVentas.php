@@ -2,6 +2,7 @@
 
 namespace App\Filament\Widgets;
 
+use App\Models\CashShift;
 use App\Models\Pedidos;
 use BezhanSalleh\FilamentShield\Traits\HasWidgetShield;
 use Filament\Widgets\StatsOverviewWidget;
@@ -19,45 +20,68 @@ class TotalVentas extends StatsOverviewWidget
     {
         return [
             'default' => 1,
-            'md' => 2,
-            'xl' => 2,
+            'md' => 3,
+            'xl' => 3,
         ];
     }
 
     protected function getStats(): array
     {
-        $total_ventas = Pedidos::whereDate('created_at', today())->sum('total_pedido');
-        $count_ventas = Pedidos::whereDate('created_at', today())->count();
-        $suma_efectivo = Pedidos::whereDate('created_at', today())->where('medio_pago', 'efectivo')->sum('total_pedido');
-        $suma_transferencia = Pedidos::whereDate('created_at', today())->where('medio_pago', 'transferencia')->sum('total_pedido');
-        $suma_transbak = Pedidos::whereDate('created_at', today())->where('medio_pago', 'transbank')->sum('total_pedido');
+        $tenantId = auth()->user()?->tenant_id;
+
+        // 1. Buscamos el turno de caja abierto actual
+        $cajaAbierta = CashShift::where('tenant_id', $tenantId)
+            ->where('estado', 'abierta')
+            ->first();
+
+        // Si no hay caja abierta, mostramos todo en cero con un aviso
+        if (! $cajaAbierta) {
+            return [
+                Stat::make('Estado de Caja', 'Cerrada')
+                    ->description('Abre un turno para ver las estadísticas')
+                    ->descriptionIcon('heroicon-o-lock-closed')
+                    ->color('danger'),
+            ];
+        }
+
+        // 2. Calculamos las ventas basándonos en la hora en que se abrió la caja (no a las 00:00)
+        $queryPedidos = Pedidos::where('tenant_id', $tenantId)
+            ->where('created_at', '>=', $cajaAbierta->fecha_apertura);
+
+        $count_ventas = (clone $queryPedidos)->count();
+        $total_ventas = (clone $queryPedidos)->sum('total_pedido');
+
+        // Ventas puras del día
+        $ventas_efectivo = (clone $queryPedidos)->where('medio_pago', 'efectivo')->sum('total_pedido');
+        $suma_transferencia = (clone $queryPedidos)->where('medio_pago', 'transferencia')->sum('total_pedido');
+        $suma_transbank = (clone $queryPedidos)->where('medio_pago', 'transbank')->sum('total_pedido');
 
         return [
-            Stat::make('Cantidad de Ventas', $count_ventas)
-                ->description('Pedidos finalizados hoy')
-                ->descriptionIcon('heroicon-o-check-circle')
-                ->color('primary'),
-
-            Stat::make('Total Ventas', '$'.number_format($total_ventas, 0, ',', '.'))
-                ->description('Ventas del día')
+            Stat::make('Ventas del Turno', $count_ventas)
+                ->description('Total facturado: $'.number_format($total_ventas, 0, ',', '.'))
                 ->descriptionIcon('heroicon-o-arrow-trending-up')
                 ->color('success'),
 
-            Stat::make('Efectivo', '$'.number_format($suma_efectivo, 0, ',', '.'))
-                ->description('Ventas en efetivo del día')
-                ->descriptionIcon('heroicon-o-currency-dollar')
+            // ESTA ES LA TARJETA MÁS IMPORTANTE AHORA
+            Stat::make('Efectivo en Caja', '$'.number_format($cajaAbierta->saldo_esperado, 0, ',', '.'))
+                ->description('Incluye fondo inicial y descuenta gastos')
+                ->descriptionIcon('heroicon-o-banknotes')
+                ->color('success'),
+
+            Stat::make('Gastos / Retiros', '$'.number_format($cajaAbierta->total_egresos, 0, ',', '.'))
+                ->description('Dinero sacado de la caja')
+                ->descriptionIcon('heroicon-o-arrow-trending-down')
+                ->color('danger'),
+
+            Stat::make('Transferencias', '$'.number_format($suma_transferencia, 0, ',', '.'))
+                ->description('Ingresos digitales')
+                ->descriptionIcon('heroicon-o-device-phone-mobile')
                 ->color('primary'),
 
-            Stat::make('Transferencia', '$'.number_format($suma_transferencia, 0, ',', '.'))
-                ->description('Ventas en transferencias del día')
-                ->descriptionIcon('heroicon-o-currency-dollar')
+            Stat::make('Transbank', '$'.number_format($suma_transbank, 0, ',', '.'))
+                ->description('Ingresos por tarjeta')
+                ->descriptionIcon('heroicon-o-credit-card')
                 ->color('primary'),
-
-            Stat::make('Transbank', '$'.number_format($suma_transbak, 0, ',', '.'))
-                ->description('Ventas en transbank del día')
-                ->descriptionIcon('heroicon-o-currency-dollar')
-                ->color('primary'),
-
         ];
     }
 }
