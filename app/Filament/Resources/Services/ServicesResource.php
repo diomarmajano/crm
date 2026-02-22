@@ -23,9 +23,9 @@ class ServicesResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'Services';
 
-    protected static ?string $pluralModelLabel = 'Servicios';
+    protected static ?string $pluralModelLabel = 'Productos';
 
-    protected static ?string $modelLabel = 'Servicio';
+    protected static ?string $modelLabel = 'Producto';
 
     protected static ?int $navigationSort = 3;
 
@@ -42,7 +42,7 @@ class ServicesResource extends Resource
     public static function getRelations(): array
     {
         return [
-            // InventoryRelationManager::class,
+            InventoryRelationManager::class,
         ];
     }
 

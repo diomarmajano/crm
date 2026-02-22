@@ -20,7 +20,8 @@ class InventoryForm
                     ->preload(),
                 TextInput::make('stock_producto')
                     ->required()
-                    ->numeric(),
+                    ->numeric()
+                    ->disabled(),
                 TextInput::make('stock_minimo')
                     ->required()
                     ->numeric(),

@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Inventories;
 use App\Filament\Resources\Inventories\Pages\CreateInventory;
 use App\Filament\Resources\Inventories\Pages\EditInventory;
 use App\Filament\Resources\Inventories\Pages\ListInventories;
+use App\Filament\Resources\Inventories\RelationManagers\MovementsRelationManager;
 use App\Filament\Resources\Inventories\Schemas\InventoryForm;
 use App\Filament\Resources\Inventories\Tables\InventoriesTable;
 use App\Models\Inventory;
@@ -41,8 +42,13 @@ class InventoryResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            MovementsRelationManager::class,
         ];
+    }
+
+    public static function canCreate(): bool
+    {
+        return false;
     }
 
     public static function getNavigationBadge(): ?string
@@ -63,7 +69,7 @@ class InventoryResource extends Resource
     {
         return [
             'index' => ListInventories::route('/'),
-            'create' => CreateInventory::route('/create'),
+            // 'create' => CreateInventory::route('/create'),
             'edit' => EditInventory::route('/{record}/edit'),
         ];
     }
