@@ -16,7 +16,9 @@ class ConfiguracionTenant extends Page implements HasForms
 {
     use InteractsWithForms;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::ShoppingCart;
+    protected static ?int $navigationSort = 7;
+
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::Cog6Tooth;
 
     protected static ?string $navigationLabel = 'Ajustes del Sistema';
 
