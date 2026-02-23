@@ -54,7 +54,12 @@ class InventoryResource extends Resource
     public static function getNavigationBadge(): ?string
     {
         // Cuenta cuántos registros cumplen la condición de alerta
-        return static::getModel()::whereColumn('stock_producto', '<=', 'stock_minimo')->count();
+        $stock = static::getModel()::whereColumn('stock_producto', '<=', 'stock_minimo')->count();
+        if ($stock != 0) {
+            return (string) $stock;
+        }
+
+        return null;
     }
 
     public static function getNavigationBadgeColor(): ?string
