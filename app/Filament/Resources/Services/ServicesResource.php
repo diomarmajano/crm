@@ -10,6 +10,7 @@ use App\Filament\Resources\Services\Schemas\ServicesForm;
 use App\Filament\Resources\Services\Tables\ServicesTable;
 use App\Models\Services;
 use BackedEnum;
+use Carbon\Carbon;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
@@ -23,9 +24,9 @@ class ServicesResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'Services';
 
-    protected static ?string $pluralModelLabel = 'Servicios';
+    protected static ?string $pluralModelLabel = 'Productos';
 
-    protected static ?string $modelLabel = 'Servicio';
+    protected static ?string $modelLabel = 'Producto';
 
     protected static ?int $navigationSort = 3;
 
@@ -37,6 +38,26 @@ class ServicesResource extends Resource
     public static function table(Table $table): Table
     {
         return ServicesTable::configure($table);
+    }
+
+    public static function getNavigationBadge(): ?string
+    {
+        $tenant = auth()->user()->tenant;
+
+        if (! $tenant) {
+            return null;
+        }
+        $diasAlerta = $tenant->settings['dias_alerta_vencimiento'] ?? 30;
+
+        $fechaLimite = Carbon::now()->addDays((int) $diasAlerta);
+
+        $cantidadAlertas = static::getModel()::query()
+            ->whereNotNull('fecha_vencimiento')
+            ->whereDate('fecha_vencimiento', '<=', $fechaLimite)
+            ->whereDate('fecha_vencimiento', '>=', Carbon::now())
+            ->count();
+
+        return $cantidadAlertas > 0 ? (string) $cantidadAlertas : null;
     }
 
     public static function getRelations(): array

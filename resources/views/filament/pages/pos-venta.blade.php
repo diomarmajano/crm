@@ -262,10 +262,13 @@
                     </div>
                     <input 
                         type="search" 
+                        wire:model.live="search" 
+                        wire:keydown.enter.prevent="scanBarcode"
                         wire:model.live.debounce.300ms="search" 
                         class="search block w-full p-4 ps-10 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500" 
                         placeholder="Buscar servicios por nombre..." 
-                        required 
+                        placeholder="Escanear código o buscar nombre..." 
+                        autofocus
                     />
                 </div>
             </div>          
@@ -324,9 +327,11 @@
                                 </div>
                                 
                                 <div class="flex items-center gap-2">
-                                    <button wire:click="updateQuantity({{ $id }}, {{ $item['cantidad'] - 1 }})" class="p-1 text-gray-500 hover:text-red-500 transition font-bold text-lg leading-none flex items-center justify-center h-6 w-6">-</button>
-                                    <span class="font-bold text-sm w-4 text-center">{{ $item['cantidad'] }}</span>
-                                    <button wire:click="addToCart({{ $id }})" class="p-1 text-gray-500 hover:text-green-500 transition font-bold text-lg leading-none flex items-center justify-center h-6 w-6">+</button>
+                                    <button wire:click="updateQuantity('{{ $id }}', {{ $item['cantidad'] - 1 }})" 
+                                    class="p-1 text-gray-500 hover:text-red-500 transition font-bold text-lg leading-none flex items-center justify-center h-6 w-6">- </button>                                    
+                                            <span class="font-bold text-sm w-4 text-center">{{ $item['cantidad'] }}</span>
+                                    <button wire:click="updateQuantity('{{ $id }}', {{ $item['cantidad'] + 1 }})" 
+                                    class="p-1 text-gray-500 hover:text-green-500 transition font-bold text-lg leading-none flex items-center justify-center h-6 w-6">+</button>                                
                                 </div>
                                 
                                 <div class="text-right ml-2 font-semibold">

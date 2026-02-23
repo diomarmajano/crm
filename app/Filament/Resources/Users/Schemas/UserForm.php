@@ -15,7 +15,7 @@ class UserForm
             ->components([
                 // 1. Selector de Tenant (Solo visible para ti)
                 Select::make('tenant_id')
-                    ->label('Lavandería')
+                    ->label('Sucursal')
                     ->options(Tenant::all()->pluck('name', 'id'))
                     ->searchable()
                     ->required()
