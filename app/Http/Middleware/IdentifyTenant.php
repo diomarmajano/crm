@@ -21,7 +21,7 @@ class IdentifyTenant
 
         // 3. Buscar el Tenant en la BD
         // Ignoramos dominios del sistema como 'admin', 'www' o 'cleanstack'
-        if (in_array($subdomain, ['admin', 'www', 'cleanstack', 'localhost'])) {
+        if (in_array($subdomain, ['admin', 'www', 'crmcloud', 'localhost'])) {
             return $next($request);
         }
 
