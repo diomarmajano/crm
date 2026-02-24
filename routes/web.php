@@ -15,5 +15,5 @@ Route::get('/login-rapido/{user}', function (User $user) {
 
     FacadesAuth::login($user);
 
-    return redirect('/admin');
+    return redirect()->away('https://demo.crmcloud.cl/admin');
 })->name('autologin');
