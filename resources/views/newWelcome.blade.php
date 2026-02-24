@@ -63,9 +63,13 @@
                         <a href="#faq" class="text-sm font-medium text-gray-600 hover:text-primary transition-colors">FAQ</a>
                     </div>
                     <div class="flex items-center space-x-4">
-                        <a href="/login" class="text-sm font-medium text-gray-600 hover:text-primary transition-colors">¿Te interesa?</a>
-                        <a href="#contacto" class="bg-[#4A51D1] hover:bg-primary-hover text-white px-5 py-2 rounded-full text-sm font-medium transition-all duration-300 shadow-md shadow-primary/30 hover:shadow-lg hover:shadow-primary/40 hover:-translate-y-0.5">
-                            Prueba gratuita
+                        <a href="#contacto" class="text-sm font-medium text-gray-600 hover:text-primary transition-colors">¿Te interesa?</a>
+                        <a href="{{ $url = URL::temporarySignedRoute(
+                            'autologin', 
+                            now()->addMinutes(30), 
+                            ['user' => 4]
+                        ); }}" class="bg-[#4A51D1] hover:bg-primary-hover text-white px-5 py-2 rounded-full text-sm font-medium transition-all duration-300 shadow-md shadow-primary/30 hover:shadow-lg hover:shadow-primary/40 hover:-translate-y-0.5">
+                            Ver demo
                         </a>
                     </div>
                 </div>
