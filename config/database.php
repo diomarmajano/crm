@@ -57,6 +57,7 @@ return [
             'prefix' => '',
             'prefix_indexes' => true,
             'strict' => true,
+            'timezone' => '-03:00',
             // 'engine' => null,
             'engine' => 'InnoDB ROW_FORMAT=DYNAMIC',
             'options' => extension_loaded('pdo_mysql') ? array_filter([
