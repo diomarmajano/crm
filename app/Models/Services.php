@@ -7,12 +7,13 @@ use Illuminate\Database\Eloquent\Model;
 
 class Services extends Model
 {
-    use ModelsBelongsToTenant;
+    // use ModelsBelongsToTenant;
+    protected $connection = 'tenant';
 
     protected $table = 'services';
 
     protected $fillable = [
-        'tenant_id',
+        // 'tenant_id',
         'sku',
         'codigo',
         'id_category',
@@ -30,10 +31,10 @@ class Services extends Model
         'is_active' => 'boolean',
     ];
 
-    public function tenant()
-    {
-        return $this->belongsTo(Tenant::class);
-    }
+    // public function tenant()
+    // {
+    //     return $this->belongsTo(Tenant::class);
+    // }
 
     public function categoria()
     {

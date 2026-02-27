@@ -7,7 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class CashMovement extends Model
 {
-    use ModelsBelongsToTenant;
+    // use ModelsBelongsToTenant;
+    protected $connection = 'tenant';
 
     protected $guarded = [];
 
@@ -26,8 +27,8 @@ class CashMovement extends Model
         return $this->belongsTo(Pedidos::class, 'pedido_id');
     }
 
-    public function tenant()
-    {
-        return $this->belongsTo(Tenant::class);
-    }
+    // public function tenant()
+    // {
+    //     return $this->belongsTo(Tenant::class);
+    // }
 }

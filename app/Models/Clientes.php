@@ -7,7 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 
 class Clientes extends Model
 {
-    use ModelsBelongsToTenant;
+    // use ModelsBelongsToTenant;
+
+    protected $connection = 'tenant';
 
     protected $table = 'clientes';
 
@@ -18,10 +20,10 @@ class Clientes extends Model
         'cliente_direccion',
     ];
 
-    public function tenant()
-    {
-        return $this->belongsTo(Tenant::class);
-    }
+    // public function tenant()
+    // {
+    //     return $this->belongsTo(Tenant::class);
+    // }
 
     public function pedidos()
     {

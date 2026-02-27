@@ -13,17 +13,16 @@ use Illuminate\Support\Facades\DB;
 
 class PosService
 {
-    public function crearPedido(array $cart, array $formData, float $total, $userId, $tenantId)
+    public function crearPedido(array $cart, array $formData, float $total, $userId)
     {
         // Iniciamos la transacción directamente
-        return DB::transaction(function () use ($cart, $formData, $total, $userId, $tenantId) {
+        return DB::transaction(function () use ($cart, $formData, $total, $userId) {
 
             // 1. Crear el pedido principal
             $pedido = Pedidos::create([
                 'user_id' => $userId,
                 'total_pedido' => $total,
                 'medio_pago' => $formData['medio_pago'],
-                'tenant_id' => $tenantId,
             ]);
 
             // 2. Procesar cada item del carrito
@@ -37,7 +36,6 @@ class PosService
                     'cantidad' => $item['cantidad'],
                     'precio_unitario' => $item['precio'],
                     'subtotal' => $item['precio'] * $item['cantidad'],
-                    'tenant_id' => $tenantId,
                 ]);
 
                 // 3. Lógica de Inventario (Kardex / Movimientos)
@@ -70,7 +68,7 @@ class PosService
                     // B) Registrar el movimiento en el historial
                     InventoryMovement::create([
                         'inventory_id' => $inventario->id,
-                        'tenant_id' => $tenantId,
+                        // 'tenant_id' => $tenantId,
                         'user_id' => $userId,
                         'tipo' => 'salida',
                         'cantidad' => $item['cantidad'],
@@ -81,8 +79,7 @@ class PosService
                     ]);
                 }
             }
-            $cajaAbierta = CashShift::where('tenant_id', $tenantId)
-                ->where('estado', 'abierta')
+            $cajaAbierta = CashShift::where('estado', 'abierta')
                 ->first();
 
             if (! $cajaAbierta) {
@@ -92,7 +89,7 @@ class PosService
             // Creamos el movimiento de ingreso de dinero
             CashMovement::create([
                 'cash_shift_id' => $cajaAbierta->id,
-                'tenant_id' => $tenantId,
+                // 'tenant_id' => $tenantId,
                 'user_id' => $userId,
                 'pedido_id' => $pedido->id,
                 'tipo' => 'ingreso',

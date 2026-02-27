@@ -4,27 +4,26 @@ namespace App\Http\Controllers;
 
 use App\Models\Pedidos;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class TicketController extends Controller
 {
-    public function imprimirTicket(Pedidos $pedido)
+    public function imprimirTicket(Request $request, $pedidoId)
     {
-        $pedido->load('items');
-        
+        // CAMBIO 2: Como el middleware SetTenantDatabase ya preparó la conexión,
+        // ahora sí podemos buscar el pedido de forma segura.
+        $pedido = Pedidos::with('items')->findOrFail($pedidoId);
+
+        $user = auth()->user();
+        $tenant = $user->tenant;
+
         $nombreTienda = 'Almacen';
-        if ($pedido->tenant_id) {
-            $tenantName = DB::table('tenants')->where('id', $pedido->tenant_id)->value('name');
-            if ($tenantName) {
-                $nombreTienda = strtoupper($tenantName);
-            }
+        if ($tenant && $tenant->name) {
+            $nombreTienda = strtoupper($tenant->name);
         }
 
-        // Datos calculados (que antes pasabas como parámetros, 
-        // idealmente deberían estar guardados en el pedido o calcularse aquí)
-        // Por simplicidad, asumiremos que se pasan por URL o se calculan:
-        $pagaCon = request('paga_con', 0); // O obtener del modelo si lo guardaste
-        $vuelto = request('vuelto', 0);
+        // CAMBIO 3: Usamos $request->query() para obtener las variables de la URL de forma segura
+        $pagaCon = $request->query('paga_con', 0);
+        $vuelto = $request->query('vuelto', 0);
 
         return view('pdf.pedido', compact('pedido', 'nombreTienda', 'pagaCon', 'vuelto'));
     }

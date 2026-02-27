@@ -4,7 +4,6 @@ namespace App\Utilities;
 
 use App\Models\Pedidos;
 use Filament\Notifications\Notification;
-use Illuminate\Support\Facades\DB;
 use Mike42\Escpos\PrintConnectors\WindowsPrintConnector;
 use Mike42\Escpos\Printer;
 
@@ -13,17 +12,8 @@ class TicketPrinterService
     public function imprimir(Pedidos $pedido, float $pagaCon, float $vuelto)
     {
         try {
-            $pedido->load('items');
-            $nombreTienda = 'Almacen';
-
-            if ($pedido->tenant_id) {
-                $tenantName = DB::table('tenants')
-                    ->where('id', $pedido->tenant_id)
-                    ->value('name');
-
-                if ($tenantName) {
-                    $nombreTienda = strtoupper($tenantName);
-                }
+            if (auth()->check() && auth()->user()->tenant) {
+                $nombreTienda = strtoupper(auth()->user()->tenant->name);
             }
 
             $connector = new WindowsPrintConnector('XP-58');

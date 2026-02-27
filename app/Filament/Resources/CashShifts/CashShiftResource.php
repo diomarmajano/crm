@@ -55,8 +55,6 @@ class CashShiftResource extends Resource
 
                 Hidden::make('user_id')
                     ->default(auth()->id()),
-                Hidden::make('tenant_id')
-                    ->default(auth()->user()?->tenant_id),
             ]);
     }
 
@@ -123,7 +121,7 @@ class CashShiftResource extends Resource
                         DB::transaction(function () use ($record, $data) {
                             CashMovement::create([
                                 'cash_shift_id' => $record->id,
-                                'tenant_id' => $record->tenant_id,
+                                // 'tenant_id' => $record->tenant_id,
                                 'user_id' => auth()->id(),
                                 'tipo' => 'egreso',
                                 'metodo_pago' => 'efectivo',

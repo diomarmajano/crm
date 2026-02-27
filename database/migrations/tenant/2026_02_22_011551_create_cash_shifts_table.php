@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('cash_shifts', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('tenant_id')->nullable()->constrained()->cascadeOnDelete();
-            $table->foreignId('user_id')->constrained('users');
+            // $table->foreignId('tenant_id')->nullable()->constrained()->cascadeOnDelete();
+            $table->unsignedBigInteger('user_id')->nullable();
 
             $table->enum('estado', ['abierta', 'cerrada'])->default('abierta');
             $table->decimal('saldo_inicial', 10, 2)->default(0);

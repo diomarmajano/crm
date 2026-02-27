@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\TicketController;
+use App\Http\Middleware\SetTenantDatabase;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -35,4 +36,4 @@ Route::get('/login-rapido/{user}', function (Request $request, User $user) {
 
 Route::get('/imprimir/pedido/{pedido}', [TicketController::class, 'imprimirTicket'])
     ->name('imprimir.ticket')
-    ->middleware('auth');
+    ->middleware('auth', SetTenantDatabase::class);

@@ -7,12 +7,14 @@ use Illuminate\Database\Eloquent\Model;
 
 class Items extends Model
 {
-    use ModelsBelongsToTenant;
+    // use ModelsBelongsToTenant;
+
+    protected $connection = 'tenant';
 
     protected $table = 'items_pedidos';
 
     protected $fillable = [
-        'tenant_id',
+        // 'tenant_id',
         'pedido_id',
         'servicio_id',
         'nombre_servicio',
@@ -21,10 +23,10 @@ class Items extends Model
         'subtotal',
     ];
 
-    public function tenant()
-    {
-        return $this->belongsTo(Tenant::class);
-    }
+    // public function tenant()
+    // {
+    //     return $this->belongsTo(Tenant::class);
+    // }
 
     public function pedido()
     {
@@ -36,13 +38,13 @@ class Items extends Model
     //     return $this->belongsTo(Clientes::class);
     // }
 
-    protected static function booted()
-    {
-        static::creating(function ($item) {
-            // Si el item tiene un pedido padre asociado, copiamos sus datos
-            if ($item->pedido) {
-                $item->tenant_id = $item->pedido->tenant_id;
-            }
-        });
-    }
+    // protected static function booted()
+    // {
+    //     static::creating(function ($item) {
+    //         // Si el item tiene un pedido padre asociado, copiamos sus datos
+    //         if ($item->pedido) {
+    //             $item->tenant_id = $item->pedido->tenant_id;
+    //         }
+    //     });
+    // }
 }

@@ -69,6 +69,7 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
+                \App\Http\Middleware\SetTenantDatabase::class,
             ])
             ->plugins([
                 FilamentShieldPlugin::make(), // <--- Agrega esta línea

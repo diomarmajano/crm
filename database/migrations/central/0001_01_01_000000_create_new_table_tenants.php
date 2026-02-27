@@ -14,7 +14,8 @@ return new class extends Migration
         Schema::create('tenants', function (Blueprint $table) {
             $table->id();
             $table->string('name', 50);
-            $table->string('domain', 100)->unique()->nullable();
+            $table->string('database_name')->nullable();
+            // $table->string('domain', 100)->unique()->nullable();
             $table->string('slug', 50)->unique();
             $table->string('email')->nullable();
             $table->boolean('is_active')->default(true);
