@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\TicketController;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -31,3 +32,7 @@ Route::get('/login-rapido/{user}', function (Request $request, User $user) {
     return redirect()->away('https://demo.crmcloud.cl/admin');
 
 })->name('autologin');
+
+Route::get('/imprimir/pedido/{pedido}', [TicketController::class, 'imprimirTicket'])
+    ->name('imprimir.ticket')
+    ->middleware('auth');

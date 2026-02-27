@@ -4,7 +4,6 @@ namespace App\Filament\Pages;
 
 use App\Models\Services;
 use App\Utilities\PosService;
-use App\Utilities\TicketPrinterService;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Hidden;
@@ -232,7 +231,7 @@ class PosVenta extends Page implements HasForms
         }
     }
 
-    public function createOrder(PosService $posService, TicketPrinterService $printerService)
+    public function createOrder(PosService $posService)
     {
         $data = $this->form->getState();
 
@@ -271,6 +270,57 @@ class PosVenta extends Page implements HasForms
 
         } catch (\Exception $e) {
             // Capturamos errores de stock o de impresión
+            Notification::make()
+                ->title('Error en la venta')
+                ->body($e->getMessage())
+                ->danger()
+                ->send();
+        }
+        if (empty($this->cart)) {
+            Notification::make()->title('Carrito vacío')->warning()->send();
+
+            return;
+        }
+
+        try {
+            // 1. Delegamos la lógica de negocio al Servicio (Igual que antes)
+            $pedido = $posService->crearPedido(
+                $this->cart,
+                $data,
+                $this->total,
+                auth()->id(),
+                auth()->user()->tenant_id ?? null
+            );
+
+            // 2. Cálculos para enviar a la vista de impresión
+            $montoPagado = ($data['medio_pago'] === 'efectivo') ? ($data['paga_con'] ?? $this->total) : $this->total;
+            $vuelto = $montoPagado - $this->total;
+
+            // 3. Generamos la URL del ticket
+            // Usamos la ruta 'imprimir.ticket' que creamos en el paso anterior
+            $urlTicket = route('imprimir.ticket', [
+                'pedido' => $pedido->id,
+                'paga_con' => $montoPagado,
+                'vuelto' => $vuelto,
+            ]);
+
+            // 4. Limpieza UI (Igual que antes)
+            $this->cart = [];
+            $this->total = 0;
+            $this->form->fill([
+                'total_carrito' => 0,
+                'paga_con' => null,
+                'vuelto' => null,
+            ]);
+
+            Notification::make()->title('Venta exitosa')->success()->send();
+
+            // 5. ¡LA MAGIA! Abrir la ventana de impresión desde el navegador
+            // Usamos $this->js para ejecutar JavaScript en el cliente
+            // Esto abrirá una ventana emergente de 400x600 (tamaño ticket)
+            $this->js("window.open('{$urlTicket}', '_blank', 'width=400,height=600');");
+
+        } catch (\Exception $e) {
             Notification::make()
                 ->title('Error en la venta')
                 ->body($e->getMessage())
