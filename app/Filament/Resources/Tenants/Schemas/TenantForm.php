@@ -14,7 +14,9 @@ class TenantForm
             ->components([
                 TextInput::make('name')
                     ->required(),
-                TextInput::make('domain'),
+                TextInput::make('email')
+                    ->required(),
+
                 TextInput::make('slug')
                     ->required(),
                 Toggle::make('is_active')

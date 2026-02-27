@@ -20,7 +20,7 @@ class TenantsTable
             ->columns([
                 TextColumn::make('name')
                     ->searchable(),
-                TextColumn::make('domain')
+                TextColumn::make('email')
                     ->searchable(),
                 TextColumn::make('slug')
                     ->searchable(),

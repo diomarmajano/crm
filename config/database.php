@@ -115,6 +115,29 @@ return [
             // 'trust_server_certificate' => env('DB_TRUST_SERVER_CERTIFICATE', 'false'),
         ],
 
+        // CONEXIONES PERSONALIZADAS PARA EL MULTITENAT
+        'central' => [
+            'driver' => 'mysql',
+            'url' => env('DATABASE_URL'),
+            'host' => env('DB_HOST', '127.0.0.1'),
+            'port' => env('DB_PORT', '3306'),
+            'database' => env('DB_DATABASE', 'forge'), // Ej: crmcloud_central
+            'username' => env('DB_USERNAME', 'forge'),
+            'password' => env('DB_PASSWORD', ''),
+            // ... resto de configuraciones por defecto
+        ],
+
+        // 2. LA CONEXIÓN DEL TENANT (Plantilla vacía)
+        'tenant' => [
+            'driver' => 'mysql',
+            'host' => env('DB_HOST', '127.0.0.1'),
+            'port' => env('DB_PORT', '3306'),
+            'database' => null, // Esto lo inyectaremos dinámicamente
+            'username' => env('DB_USERNAME', 'forge'), // Idealmente el mismo user con acceso global, o uno dinámico
+            'password' => env('DB_PASSWORD', ''),
+            // ...
+        ],
+
     ],
 
     /*

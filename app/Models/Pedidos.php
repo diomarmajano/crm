@@ -7,22 +7,23 @@ use Illuminate\Database\Eloquent\Model;
 
 class Pedidos extends Model
 {
-    use ModelsBelongsToTenant;
+    // use ModelsBelongsToTenant;
+    protected $connection = 'tenant';
 
     protected $table = 'pedidos';
 
     protected $fillable = [
-        'tenant_id',
+        // 'tenant_id',
         'pedido_id',
         'user_id',
         'medio_pago',
         'total_pedido',
     ];
 
-    public function tenant()
-    {
-        return $this->belongsTo(Tenant::class);
-    }
+    // public function tenant()
+    // {
+    //     return $this->belongsTo(Tenant::class);
+    // }
 
     public function items()
     {

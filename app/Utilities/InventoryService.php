@@ -39,7 +39,7 @@ class InventoryService
             // 3. Crear el registro en el historial (Kardex)
             InventoryMovement::create([
                 'inventory_id' => $inventory->id,
-                'tenant_id' => $inventory->tenant_id,
+                // 'tenant_id' => $inventory->tenant_id,
                 'user_id' => $userId ?? auth()->id(),
                 'tipo' => $tipo,
                 'cantidad' => $cantidad,

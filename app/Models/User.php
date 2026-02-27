@@ -14,10 +14,12 @@ use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
+    protected $connection = 'central';
+
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, HasPanelShield, HasRoles, Notifiable;
 
-    use ModelsBelongsToTenant;
+    // use ModelsBelongsToTenant;
 
     /**
      * The attributes that are mass assignable.

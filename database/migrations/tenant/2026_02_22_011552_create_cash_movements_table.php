@@ -14,8 +14,8 @@ return new class extends Migration
         Schema::create('cash_movements', function (Blueprint $table) {
             $table->id();
             $table->foreignId('cash_shift_id')->constrained('cash_shifts')->cascadeOnDelete();
-            $table->foreignId('tenant_id')->nullable()->constrained()->cascadeOnDelete();
-            $table->foreignId('user_id')->constrained('users');
+            // $table->foreignId('tenant_id')->nullable()->constrained()->cascadeOnDelete();
+            $table->unsignedBigInteger('user_id');
 
             $table->foreignId('pedido_id')->nullable()->constrained('pedidos')->nullOnDelete();
 

@@ -7,7 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class Inventory extends Model
 {
-    use ModelsBelongsToTenant;
+    // use ModelsBelongsToTenant;
+    protected $connection = 'tenant';
 
     protected $table = 'inventory';
 
@@ -29,7 +30,7 @@ class Inventory extends Model
             if ($inventory->stock_producto > 0) {
                 InventoryMovement::create([
                     'inventory_id' => $inventory->id,
-                    'tenant_id' => $inventory->tenant_id,
+                    // 'tenant_id' => $inventory->tenant_id,
                     // auth()->id() puede ser null si se crea por consola/seeder
                     'user_id' => auth()->id(),
                     'tipo' => 'entrada',

@@ -6,13 +6,15 @@ use Illuminate\Database\Eloquent\Model;
 
 class InventoryMovement extends Model
 {
+    protected $connection = 'tenant';
+
     protected $guarded = [];
 
     protected $table = 'inventory_movements';
 
     protected $fillable = [
         'inventory_id',
-        'tenant_id',
+        // 'tenant_id',
         'user_id',
         'tipo',
         'cantidad',
@@ -31,8 +33,8 @@ class InventoryMovement extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function tenant()
-    {
-        return $this->belongsTo(Tenant::class);
-    }
+    // public function tenant()
+    // {
+    //     return $this->belongsTo(Tenant::class);
+    // }
 }
