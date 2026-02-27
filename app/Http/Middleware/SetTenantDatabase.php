@@ -17,7 +17,10 @@ class SetTenantDatabase
         $tenant = auth()->user()->tenant;
 
         if (! $tenant || ! $tenant->is_active) {
-            abort(403, 'Tu cuenta está inactiva o no tiene una instancia asignada.');
+            auth()->logout();
+
+            return redirect()->route('/')->with('error', 'Cuenta inactiva');
+            // abort(403, 'Tu cuenta está inactiva o no tiene una instancia asignada.');
         }
 
         // 1. Inyectamos la BD

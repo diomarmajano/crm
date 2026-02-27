@@ -242,54 +242,12 @@ class PosVenta extends Page implements HasForms
         }
 
         try {
-            // 1. Delegamos la lógica de negocio al Servicio
-            $pedido = $posService->crearPedido(
-                $this->cart,
-                $data,
-                $this->total,
-                auth()->id(),
-            );
-
-            // 2. Cálculos visuales para impresión
-            $montoPagado = ($data['medio_pago'] === 'efectivo') ? ($data['paga_con'] ?? $this->total) : $this->total;
-            $vuelto = $montoPagado - $this->total;
-
-            // 3. Delegamos la impresión
-            $printerService->imprimir($pedido, $montoPagado, $vuelto);
-
-            // 4. Limpieza UI
-            $this->cart = [];
-            $this->total = 0;
-            $this->form->fill([
-                'total_carrito' => 0,
-                'paga_con' => null,
-                'vuelto' => null,
-            ]);
-
-            Notification::make()->title('Venta exitosa')->success()->send();
-
-        } catch (\Exception $e) {
-            // Capturamos errores de stock o de impresión
-            Notification::make()
-                ->title('Error en la venta')
-                ->body($e->getMessage())
-                ->danger()
-                ->send();
-        }
-        if (empty($this->cart)) {
-            Notification::make()->title('Carrito vacío')->warning()->send();
-
-            return;
-        }
-
-        try {
             // 1. Delegamos la lógica de negocio al Servicio (Igual que antes)
             $pedido = $posService->crearPedido(
                 $this->cart,
                 $data,
                 $this->total,
                 auth()->id(),
-                auth()->user()->tenant_id ?? null
             );
 
             // 2. Cálculos para enviar a la vista de impresión
