@@ -28,6 +28,12 @@ class CategoryResource extends Resource
 
     protected static ?string $modelLabel = 'Categoría';
 
+    public static function canViewAny(): bool
+    {
+        // Solo pueden ver este recurso los usuarios que tengan un tenant asignado
+        return auth()->user()->tenant_id !== null;
+    }
+
     public static function form(Schema $schema): Schema
     {
         return CategoryForm::configure($schema);

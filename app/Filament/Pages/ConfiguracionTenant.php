@@ -16,6 +16,12 @@ class ConfiguracionTenant extends Page implements HasForms
 {
     use InteractsWithForms;
 
+    public static function shouldRegisterNavigation(): bool
+    {
+        // Solo se registra en el menú si el usuario tiene un tenant asignado
+        return auth()->user()->tenant_id !== null;
+    }
+
     protected static ?int $navigationSort = 7;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::Cog6Tooth;

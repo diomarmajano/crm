@@ -29,6 +29,12 @@ class PedidosResource extends Resource
 
     protected static ?int $navigationSort = 2;
 
+    public static function canViewAny(): bool
+    {
+        // Solo pueden ver este recurso los usuarios que tengan un tenant asignado
+        return auth()->user()->tenant_id !== null;
+    }
+
     public static function canCreate(): bool
     {
         return false;

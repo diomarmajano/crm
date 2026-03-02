@@ -15,24 +15,20 @@ class SetTenantDatabase
         }
 
         $tenant = auth()->user()->tenant;
+        $user = auth()->user();
 
-        if (! $tenant || ! $tenant->is_active) {
-            auth()->logout();
+        if ($user->hasRole('super_admin')) {
+            config(['database.default' => 'central']);
 
-            return redirect()->route('/')->with('error', 'Cuenta inactiva');
-            // abort(403, 'Tu cuenta está inactiva o no tiene una instancia asignada.');
+            return $next($request);
         }
 
-        // 1. Inyectamos la BD
         config(['database.connections.tenant.database' => $tenant->database_name]);
 
-        // 2. Purgamos la conexión vieja
         DB::purge('tenant');
 
-        // 3. Forzamos la reconexión física inmediata con la nueva BD
         DB::reconnect('tenant');
 
-        // 4. Establecemos por defecto
         config(['database.default' => 'tenant']);
         DB::setDefaultConnection('tenant');
 
