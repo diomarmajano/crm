@@ -40,6 +40,12 @@ class ServicesResource extends Resource
         return ServicesTable::configure($table);
     }
 
+    public static function canViewAny(): bool
+    {
+        // Solo pueden ver este recurso los usuarios que tengan un tenant asignado
+        return auth()->user()->tenant_id !== null;
+    }
+
     public static function getNavigationBadge(): ?string
     {
         $tenant = auth()->user()->tenant;

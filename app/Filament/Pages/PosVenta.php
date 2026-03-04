@@ -32,6 +32,12 @@ class PosVenta extends Page implements HasForms
 
     protected string $view = 'filament.pages.pos-venta';
 
+    public static function shouldRegisterNavigation(): bool
+    {
+        // Solo se registra en el menú si el usuario tiene un tenant asignado
+        return auth()->user()->tenant_id !== null;
+    }
+
     // Variables del Carrito
     public $cart = [];
 

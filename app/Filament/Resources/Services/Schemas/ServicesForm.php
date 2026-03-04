@@ -43,7 +43,7 @@ class ServicesForm
                                     Select::make('id_category')
                                         ->label('Categoría')
                                         ->options(Category::pluck('nombre_categoria', 'id'))
-                                        ->required()
+
                                         ->searchable(),
 
                                 ]),

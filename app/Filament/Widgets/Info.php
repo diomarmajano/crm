@@ -12,6 +12,11 @@ class Info extends StatsOverviewWidget
 
     protected int|string|array $columnSpan = 'full';
 
+    public static function canView(): bool
+    {
+        return auth()->user()->tenant_id !== null;
+    }
+
     protected function getColumns(): int|array
     {
         return [

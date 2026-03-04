@@ -20,6 +20,11 @@ class DailySalesChart extends ApexChartWidget
 
     protected static ?int $sort = 3;
 
+    public static function canView(): bool
+    {
+        return auth()->user()->tenant_id !== null;
+    }
+
     protected function getOptions(): array
     {
         $start = Carbon::now()->startOfMonth();
