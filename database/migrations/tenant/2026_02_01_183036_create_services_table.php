@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('services', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('tenant_id')->nullable()->constrained()->cascadeOnDelete();
+            // $table->foreignId('tenant_id')->nullable()->constrained()->cascadeOnDelete();
             $table->foreignId('id_category')->nullable()->constrained('category')->cascadeOnDelete();
             $table->boolean('is_active')->nullable();
             $table->string('sku')->nullable();

@@ -16,6 +16,11 @@ class LowStockProducts extends TableWidget
 
     protected static ?int $sort = 2;
 
+    public static function canView(): bool
+    {
+        return auth()->user()->tenant_id !== null;
+    }
+
     protected function getTableQuery(): Builder
     {
         // Asumiendo que tu modelo es Inventory

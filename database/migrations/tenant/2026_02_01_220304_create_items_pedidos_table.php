@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('items_pedidos', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('tenant_id')->nullable()->constrained()->cascadeOnDelete();
+            // $table->foreignId('tenant_id')->nullable()->constrained()->cascadeOnDelete();
             $table->foreignId('pedido_id')->nullable()->constrained('pedidos')->cascadeOnDelete();
             $table->string('nombre_servicio'); // Por si borras el servicio en el futuro, queda el registro
             $table->integer('cantidad')->default(1);

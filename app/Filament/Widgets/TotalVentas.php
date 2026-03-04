@@ -16,6 +16,11 @@ class TotalVentas extends StatsOverviewWidget
 
     protected int|string|array $columnSpan = 'full';
 
+    public static function canView(): bool
+    {
+        return auth()->user()->tenant_id !== null;
+    }
+
     protected function getColumns(): int|array
     {
         return [
@@ -27,11 +32,14 @@ class TotalVentas extends StatsOverviewWidget
 
     protected function getStats(): array
     {
-        $tenantId = auth()->user()?->tenant_id;
+        // $tenantId = auth()->user()?->tenant_id;
 
         // 1. Buscamos el turno de caja abierto actual
-        $cajaAbierta = CashShift::where('tenant_id', $tenantId)
-            ->where('estado', 'abierta')
+        // $cajaAbierta = CashShift::where('tenant_id', $tenantId)
+        //     ->where('estado', 'abierta')
+        //     ->first();
+
+        $cajaAbierta = CashShift::where('estado', 'abierta')
             ->first();
 
         // Si no hay caja abierta, mostramos todo en cero con un aviso
@@ -45,8 +53,10 @@ class TotalVentas extends StatsOverviewWidget
         }
 
         // 2. Calculamos las ventas basándonos en la hora en que se abrió la caja (no a las 00:00)
-        $queryPedidos = Pedidos::where('tenant_id', $tenantId)
-            ->where('created_at', '>=', $cajaAbierta->fecha_apertura);
+        // $queryPedidos = Pedidos::where('tenant_id', $tenantId)
+        //     ->where('created_at', '>=', $cajaAbierta->fecha_apertura);
+
+        $queryPedidos = Pedidos::where('created_at', '>=', $cajaAbierta->fecha_apertura);
 
         $count_ventas = (clone $queryPedidos)->count();
         $total_ventas = (clone $queryPedidos)->sum('total_pedido');

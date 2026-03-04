@@ -67,7 +67,7 @@
                         <a href="{{ $url = URL::temporarySignedRoute(
                             'autologin', 
                             now()->addMinutes(30), 
-                            ['user' => 4]
+                            ['user' => 'demo']
                         ); }}" class="bg-[#4A51D1] hover:bg-primary-hover text-white px-5 py-2 rounded-full text-sm font-medium transition-all duration-300 shadow-md shadow-primary/30 hover:shadow-lg hover:shadow-primary/40 hover:-translate-y-0.5">
                             Ver demo
                         </a>
@@ -266,7 +266,7 @@
 
                         <h3 class="text-2xl font-bold text-gray-900 text-center mb-2">Plan crmcloud</h3>
                         <div class="flex justify-center items-baseline my-6">
-                            <span class="text-5xl font-extrabold text-gray-900">$30.000</span>
+                            <span class="text-5xl font-extrabold text-gray-900">$29.990</span>
                             <span class="text-gray-500 ml-2 font-medium">/mes + IVA</span>
                         </div>
                         
