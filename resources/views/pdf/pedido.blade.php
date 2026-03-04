@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+{{-- <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -142,5 +142,60 @@
             }, 500);
         }
     </script>
+</body>
+</html> --}}
+
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Imprimir Ticket</title>
+    <style>
+        /* Eliminamos todos los márgenes por defecto */
+        body, html {
+            margin: 0;
+            padding: 0;
+            background-color: #f0f0f0;
+        }
+        /* Configuración crucial para texto de ticket térmico */
+        pre {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 12px;
+            font-weight: bold;
+            line-height: 1.2;
+            margin: 0;
+            white-space: pre;
+            color: #000;
+        }
+        
+        /* Contenedor solo para la vista previa en pantalla */
+        .ticket-container {
+            width: 58mm;
+            background: #fff;
+            padding: 2mm;
+            margin: 10px auto;
+            box-shadow: 0 0 5px rgba(0,0,0,0.2);
+        }
+
+        /* Reglas exclusivas para el momento de imprimir */
+        @media print {
+            body { background-color: #fff; }
+            .ticket-container {
+                margin: 0;
+                padding: 0;
+                box-shadow: none;
+                width: 100%;
+            }
+            @page {
+                margin: 0; /* Quita los márgenes del navegador (fecha, url, etc) */
+            }
+        }
+    </style>
+</head>
+<body onload="window.print();">
+    <div class="ticket-container">
+        <pre>{{ $ticket }}</pre>
+    </div>
 </body>
 </html>

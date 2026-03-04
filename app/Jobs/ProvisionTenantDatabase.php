@@ -47,5 +47,11 @@ class ProvisionTenantDatabase implements ShouldQueue
             '--force' => true,
         ]);
 
+        Artisan::call('db:seed', [
+            '--database' => 'tenant',
+            '--class' => 'CategoriesSeed',
+            '--force' => true,
+        ]);
+
     }
 }
